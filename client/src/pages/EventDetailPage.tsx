@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -14,30 +14,32 @@ import {
   History, 
   Lightbulb, 
   Check, 
-  X
+  X,
+  RotateCw
 } from 'lucide-react';
+import { apiClient } from '../services/api';
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams();
   const [explainLevel, setExplainLevel] = useState<'verySimple' | 'beginner' | 'student' | 'technical' | 'deepDive'>('beginner');
   const [isSaved, setIsSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Quiz state
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
 
-  // Mock comprehensive 7-part breakdown event data
-  const eventData = {
+  // Default fallback data structure
+  const [eventData, setEventData] = useState({
     id: id || 'story-1',
     title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
     category: 'Economy & Money',
     source: 'Financial Times & Reuters Wire',
     originalUrl: 'https://www.reuters.com/markets/rates-bonds/',
-    publishedAt: 'September 11, 2026 • 2 hours ago',
+    publishedAt: 'September 12, 2026 • 2 hours ago',
     importanceLevel: 'MUST_KNOW',
     importanceScore: 92,
     
-    // 7-Part Structured Breakdown
     breakdown: {
       whatHappened: 'Major central banks across key emerging and developed economies have signaled a transition in interest rate policy, adjusting repo rates and statutory reserve targets to stabilize consumer prices while avoiding industrial slowdown.',
       whyDidItHappen: 'Post-supply-chain stabilization, combined with shifting commodity import costs and currency liquidity fluctuations, prompted monetary policy committees to re-calibrate benchmark lending rates.',
@@ -56,7 +58,6 @@ export const EventDetailPage: React.FC = () => {
       background: 'Following unprecedented global rate hikes in previous years to curb post-pandemic inflation spikes, central banks entered a holding phase. This latest adjustment represents the first coordinated shift toward neutral-to-supportive monetary balance.'
     },
 
-    // 5 Explanation Levels
     explanations: {
       verySimple: 'Think of the central bank as the "bank for all banks." When they change rates, borrowing money gets either cheaper or more expensive for everyone. They are making sure things don\'t get too expensive while helping businesses keep people employed.',
       beginner: 'A central bank controls how expensive it is to borrow money. When inflation (prices of everyday items) is high, they make loans more expensive so people spend less. Now that prices are cooling down, they are balancing rates so businesses can grow without triggering high prices again.',
@@ -65,7 +66,6 @@ export const EventDetailPage: React.FC = () => {
       deepDive: 'Macroeconomic analysis: The central bank is responding to real positive interest rate differentials and shifts in the Taylor Rule optimal rate. With headline CPI converging towards target and core inflation softening, preserving the output gap requires moving from restrictive stance toward neutral rate ($r^*$) equilibrium.'
     },
 
-    // Prerequisite Concepts for "Teach Me"
     concepts: [
       { id: 'inflation', title: 'Inflation', desc: 'The rate at which general price levels for goods and services rise.' },
       { id: 'interest-rates', title: 'Interest Rates', desc: 'The cost of borrowing money or the reward for saving it.' },
@@ -73,7 +73,6 @@ export const EventDetailPage: React.FC = () => {
       { id: 'monetary-policy', title: 'Monetary Policy', desc: 'Actions taken by central banks to control money supply and promote sustainable growth.' }
     ],
 
-    // 3-Question Understanding Quiz
     quiz: [
       {
         id: 1,
@@ -110,7 +109,22 @@ export const EventDetailPage: React.FC = () => {
         explanation: 'Floating-rate loans are linked to external benchmarks (like repo rate); when the benchmark drops, banks reduce lending rates.'
       }
     ]
-  };
+  });
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    apiClient.get(`/articles/${id}`)
+      .then((res) => {
+        if (res.data?.success && res.data.data) {
+          setEventData(res.data.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Using baseline context for article:', err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const handleSelectAnswer = (qIndex: number, optIndex: number) => {
     if (showResults) return;
@@ -127,17 +141,26 @@ export const EventDetailPage: React.FC = () => {
     return score;
   };
 
+  if (loading) {
+    return (
+      <div className="p-20 text-center space-y-4">
+        <RotateCw className="h-8 w-8 text-brand-400 animate-spin mx-auto" />
+        <p className="text-slate-400 text-sm">Generating AI comprehension breakdown & understanding quiz...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto pb-16">
       
       {/* Back button & top bar */}
       <div className="flex items-center justify-between">
         <Link 
-          to="/daily-brief"
+          to="/all-news"
           className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Daily Brief</span>
+          <span>Back to Live Stream</span>
         </Link>
 
         <div className="flex items-center gap-2">
@@ -159,7 +182,7 @@ export const EventDetailPage: React.FC = () => {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full">
-            MUST KNOW • Score {eventData.importanceScore}/100
+            {eventData.importanceLevel.replace('_', ' ')} • Score {eventData.importanceScore}/100
           </span>
           <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             {eventData.category}

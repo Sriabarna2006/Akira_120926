@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDailyBrief, getArticleById } from '../controllers/news.controller.js';
+import { getLiveNewsStream, syncLiveNews, getDailyBrief, getArticleById } from '../controllers/news.controller.js';
 import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
 
 const router = Router();
@@ -13,7 +13,11 @@ router.get('/health', (req, res) => {
   });
 });
 
-// News & Daily Brief
+// Live News Stream & Feed Sync
+router.get('/news/live', getLiveNewsStream);
+router.post('/news/sync', syncLiveNews);
+
+// Daily Brief & Article Details
 router.get('/daily-brief', getDailyBrief);
 router.get('/articles/:id', getArticleById);
 

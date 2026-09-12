@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Flame, 
+  Radio,
   Compass, 
   GraduationCap, 
   Bookmark, 
@@ -26,7 +27,8 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const mainNavItems = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/daily-brief', label: 'Daily Brief', icon: Flame, badge: 'Live' },
+    { to: '/all-news', label: 'All News Stream', icon: Radio, badge: 'Live' },
+    { to: '/daily-brief', label: 'Daily Brief', icon: Flame },
     { to: '/explore', label: 'Explore Events', icon: Compass },
     { to: '/learn', label: 'Learn Concepts', icon: GraduationCap },
     { to: '/knowledge', label: 'My Knowledge', icon: BarChart3 },

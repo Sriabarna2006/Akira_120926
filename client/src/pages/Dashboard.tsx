@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -9,46 +9,85 @@ import {
   BookOpen, 
   GraduationCap, 
   TrendingUp, 
-  HelpCircle
+  HelpCircle,
+  Radio
 } from 'lucide-react';
+import { apiClient } from '../services/api';
+
+interface ArticleItem {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  source: string;
+  originalUrl: string;
+  publishedAt: string;
+  importanceLevel: 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING';
+  importanceScore: number;
+  whyItMatters: string;
+  estimatedReadTime: string;
+  relatedConcepts: string[];
+}
 
 export const Dashboard: React.FC = () => {
-  // Mock current briefing data for Phase 1 verification
-  const topStory = {
+  const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [totalLiveCount, setTotalLiveCount] = useState<number>(100);
+
+  useEffect(() => {
+    apiClient.get('/news/live')
+      .then((res) => {
+        if (res.data?.success && res.data.data?.length > 0) {
+          setArticles(res.data.data);
+          setTotalLiveCount(res.data.meta?.total || res.data.data.length);
+        }
+      })
+      .catch((err) => console.error('Failed to load dashboard live feed:', err));
+  }, []);
+
+  // Use the top scored article as the spotlight
+  const topStory = articles.length > 0 ? articles[0] : {
     id: 'story-1',
     title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
     summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
     category: 'Economy & Money',
     source: 'Financial Times / Reuters',
     originalUrl: 'https://reuters.com',
-    publishedAt: '2 hours ago',
-    importanceLevel: 'MUST_KNOW',
+    publishedAt: new Date().toISOString(),
+    importanceLevel: 'MUST_KNOW' as const,
     importanceScore: 92,
     whyItMatters: 'Directly impacts home loan EMIs, business borrowing costs, currency exchange rates, and consumer purchasing power.',
     estimatedReadTime: '3 min read',
     relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy', 'Central Banking']
   };
 
-  const trendingBriefs = [
+  const trendingBriefs = articles.length > 1 ? articles.slice(1, 5) : [
     {
       id: 'story-2',
       title: 'EU Enforces Comprehensive AI Act: What High-Risk AI Classification Means for Tech',
+      summary: 'Landmark AI framework enters legal enforcement requiring strict audits for biometric and generative foundational models.',
       category: 'AI & Technology',
       source: 'MIT Technology Review',
-      publishedAt: '4 hours ago',
-      importanceLevel: 'MUST_KNOW',
+      originalUrl: 'https://technologyreview.com',
+      publishedAt: new Date().toISOString(),
+      importanceLevel: 'MUST_KNOW' as const,
       importanceScore: 89,
-      whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.'
+      whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.',
+      estimatedReadTime: '4 min read',
+      relatedConcepts: ['AI Governance', 'Algorithmic Auditing']
     },
     {
       id: 'story-3',
       title: 'Critical Zero-Day Vulnerability Discovered in Cloud Identity Infrastructure',
+      summary: 'Security researchers unveil token forging vulnerability allowing cross-tenant privilege escalation.',
       category: 'Cybersecurity',
       source: 'Wired Security',
-      publishedAt: '6 hours ago',
-      importanceLevel: 'IMPORTANT',
+      originalUrl: 'https://wired.com',
+      publishedAt: new Date().toISOString(),
+      importanceLevel: 'IMPORTANT' as const,
       importanceScore: 78,
-      whyItMatters: 'Requires immediate enterprise patching to prevent unauthorized session hijacking across global cloud deployments.'
+      whyItMatters: 'Requires immediate enterprise patching to prevent unauthorized session hijacking across cloud deployments.',
+      estimatedReadTime: '2 min read',
+      relatedConcepts: ['OAuth / JWT Tokens', 'Zero-Day Exploits']
     }
   ];
 
@@ -74,18 +113,20 @@ export const Dashboard: React.FC = () => {
             Good morning. Here is what is shaping the world today.
           </h1>
           <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-            We filtered 640+ global events into <strong>3 high-impact intelligence briefs</strong> with prerequisite concept pathways ready for you.
+            Continuously ingesting and scoring <strong>{totalLiveCount}+ live global events</strong> into structured intelligence briefs with prerequisite concept pathways.
           </p>
         </div>
         
-        <Link 
-          to="/daily-brief"
-          className="self-start md:self-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 text-white font-medium text-sm shadow-glow-purple transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-        >
-          <Flame className="h-4 w-4 text-amber-300" />
-          <span>Read Daily Brief</span>
-          <ArrowRight className="h-4 w-4 ml-1" />
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link 
+            to="/all-news"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 text-white font-semibold text-xs shadow-glow-purple transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+          >
+            <Radio className="h-4 w-4 text-emerald-300 animate-pulse" />
+            <span>All News Stream ({totalLiveCount})</span>
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Link>
+        </div>
       </div>
 
       {/* 2. Top Must-Know Story Spotlight Card */}
@@ -94,14 +135,14 @@ export const Dashboard: React.FC = () => {
         
         <div className="flex flex-wrap items-center gap-2.5 mb-4">
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-            MUST KNOW • Score {topStory.importanceScore}/100
+            {topStory.importanceLevel.replace('_', ' ')} • Score {topStory.importanceScore}/100
           </span>
           <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             {topStory.category}
           </span>
           <span className="text-xs text-slate-400 flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            {topStory.publishedAt}
+            Live Wire
           </span>
         </div>
 
@@ -116,22 +157,24 @@ export const Dashboard: React.FC = () => {
         </p>
 
         {/* Why it matters highlight box */}
-        <div className="mt-4 p-3.5 rounded-xl bg-slate-900/90 border border-amber-500/20 flex items-start gap-3">
-          <TrendingUp className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">Why It Matters</span>
-            <p className="text-xs sm:text-sm text-slate-300 mt-0.5 leading-relaxed">{topStory.whyItMatters}</p>
+        {topStory.whyItMatters && (
+          <div className="mt-4 p-3.5 rounded-xl bg-slate-900/90 border border-amber-500/20 flex items-start gap-3">
+            <TrendingUp className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">Why It Matters</span>
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5 leading-relaxed">{topStory.whyItMatters}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action Row */}
         <div className="mt-6 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-400 font-medium">Prerequisites:</span>
-            {topStory.relatedConcepts.map((concept) => (
+            {topStory.relatedConcepts?.slice(0, 3).map((concept) => (
               <Link 
                 key={concept}
-                to={`/learn?concept=${encodeURIComponent(concept)}`}
+                to={`/learn?concept=${encodeURIComponent(concept.toLowerCase().replace(/\s+/g, '-'))}`}
                 className="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-brand-600/30 text-slate-300 hover:text-white border border-slate-700/60 transition-colors flex items-center gap-1"
               >
                 <BookOpen className="h-3 w-3 text-brand-400" />
@@ -153,7 +196,7 @@ export const Dashboard: React.FC = () => {
 
             <Link 
               to={`/event/${topStory.id}`}
-              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-glow-purple"
             >
               <span>Breakdown & Quiz</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -170,10 +213,10 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Flame className="h-4 w-4 text-amber-400" />
-              <span>More High-Impact Briefs</span>
+              <span>More High-Impact Breaking Briefs</span>
             </h3>
-            <Link to="/explore" className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
-              <span>View all</span>
+            <Link to="/all-news" className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
+              <span>View all {totalLiveCount} live stories</span>
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -182,15 +225,14 @@ export const Dashboard: React.FC = () => {
             {trendingBriefs.map((brief) => (
               <div 
                 key={brief.id} 
-                className="glass-panel glass-panel-hover p-5 rounded-xl border border-white/5 flex flex-col justify-between"
+                className="glass-panel glass-panel-hover p-5 rounded-xl border border-white/5 flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className={brief.importanceLevel === 'MUST_KNOW' ? 'badge-must-know text-[10px] font-bold px-2 py-0.5 rounded-full' : 'badge-important text-[10px] font-bold px-2 py-0.5 rounded-full'}>
-                      {brief.importanceLevel.replace('_', ' ')}
+                      {brief.importanceLevel.replace('_', ' ')} • {brief.importanceScore}/100
                     </span>
                     <span className="text-[11px] text-slate-400">{brief.category}</span>
-                    <span className="text-[11px] text-slate-500">• {brief.publishedAt}</span>
                   </div>
 
                   <Link to={`/event/${brief.id}`}>
@@ -204,7 +246,7 @@ export const Dashboard: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
                   <span className="text-slate-500">Source: {brief.source}</span>
                   <Link to={`/event/${brief.id}`} className="text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
                     <span>Explain & Learn</span>
