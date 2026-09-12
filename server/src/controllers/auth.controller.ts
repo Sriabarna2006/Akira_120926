@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { supabaseAdmin, checkDatabaseConnection, isSupabaseConfigured } from '../db/supabase.js';
+import { checkNeonConnection, runNeonMigrations, isNeonConfigured } from '../db/neon.js';
 
 // In-memory fallback profile store for offline/development mode
 interface LocalProfile {
@@ -17,11 +18,30 @@ const localProfiles = new Map<string, LocalProfile>();
 export class AuthController {
   /**
    * GET /api/health/db
-   * Tests Supabase/PostgreSQL connection health.
+   * Tests Neon DB & Supabase connection health.
    */
   static async checkDbHealth(req: Request, res: Response): Promise<void> {
-    const health = await checkDatabaseConnection();
-    res.json(health);
+    const supabaseHealth = await checkDatabaseConnection();
+    const neonHealth = await checkNeonConnection();
+
+    const activeDb = isNeonConfigured 
+      ? (neonHealth.isConnected ? 'Neon DB (PostgreSQL)' : 'Neon DB (Connection Error)')
+      : (isSupabaseConfigured && supabaseHealth.isConnected ? 'Supabase (PostgreSQL)' : 'In-Memory / Fallback Mode');
+
+    res.json({
+      activeDatabase: activeDb,
+      neon: neonHealth,
+      supabase: supabaseHealth,
+    });
+  }
+
+  /**
+   * POST /api/health/db/migrate
+   * Runs the Neon DB schema migration automatically.
+   */
+  static async migrateNeon(req: Request, res: Response): Promise<void> {
+    const result = await runNeonMigrations();
+    res.json(result);
   }
 
   /**

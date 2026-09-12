@@ -29,11 +29,16 @@ app.use('/api', apiRoutes);
 // Centralized error handling
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`=========================================`);
-  console.log(`🚀 AKIRA API Server Running`);
-  console.log(`📡 URL: http://localhost:${PORT}`);
-  console.log(`🌐 Allowed Origin: ${CORS_ORIGIN}`);
-  console.log(`=========================================`);
-});
+// Start server if not running in a serverless environment
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`=========================================`);
+    console.log(`🚀 AKIRA API Server Running`);
+    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`🌐 Allowed Origin: ${CORS_ORIGIN}`);
+    console.log(`=========================================`);
+  });
+}
+
+export default app;
+

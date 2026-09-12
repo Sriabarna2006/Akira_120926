@@ -1,6 +1,7 @@
 {
   "name": "real-world-intelligence-learning-assistant",
   "version": "0.1.0",
+  "type": "module",
   "description": "AI-powered real-world intelligence and learning platform turning breaking events into structured knowledge.",
   "private": true,
   "workspaces": [
@@ -11,7 +12,8 @@
     "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
     "dev:client": "npm run dev --workspace=client",
     "dev:server": "npm run dev --workspace=server",
-    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "build": "npm run build --workspace=client && node copy-dist.js",
+    "build:all": "npm run build --workspace=server && npm run build --workspace=client && node copy-dist.js",
     "test": "npm run test --workspace=server"
   },
   "devDependencies": {

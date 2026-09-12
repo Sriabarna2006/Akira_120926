@@ -25,6 +25,7 @@ router.get('/health', (req, res) => {
   });
 });
 router.get('/health/db', AuthController.checkDbHealth);
+router.post('/health/db/migrate', AuthController.migrateNeon);
 
 // 🔐 AUTH & USER-PRIVATE ROUTES
 router.use('/auth', authRoutes);
