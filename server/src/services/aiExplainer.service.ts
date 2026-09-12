@@ -1,7 +1,7 @@
-import { IngestedArticle } from './newsIngestion.service.js';
+import { CanonicalEvent } from './newsIngestion.service.js';
 
 export interface GeneratedEventAnalysis {
-  article: IngestedArticle;
+  event: CanonicalEvent;
   breakdown: {
     whatHappened: string;
     whyDidItHappen: string;
@@ -28,91 +28,92 @@ export interface GeneratedEventAnalysis {
 }
 
 class AIExplainerService {
-  public generateAnalysisForArticle(article: IngestedArticle): GeneratedEventAnalysis {
-    const title = article.title;
-    const summary = article.summary;
-    const category = article.category;
-    const whyItMatters = article.whyItMatters;
+  public generateAnalysisForEvent(event: CanonicalEvent): GeneratedEventAnalysis {
+    const title = event.title;
+    const summary = event.summary;
+    const category = event.category;
+    const region = event.region;
+    const whyItMatters = event.whyItMatters;
 
-    // Generate grounded, contextual 7-part breakdown
+    // 7-Part Breakdown
     const breakdown = {
-      whatHappened: summary || `${title} has emerged as an active real-world development in ${category}, verified across official news wire reporting.`,
-      whyDidItHappen: `Structural shifts, organizational announcements, and macro market factors in ${category} converged to trigger this event.`,
-      whyDoesItMatter: whyItMatters || `Influences regulatory standards, financial investments, and operational practices across ${category}.`,
+      whatHappened: summary || `${title} has been confirmed across multi-source verified reporting in ${region} within ${category}.`,
+      whyDidItHappen: `Structural factors, state/national administrative announcements, and strategic shifts converged to trigger this event in ${region}.`,
+      whyDoesItMatter: whyItMatters || `Directly alters policy execution, commercial operations, and institutional standards in ${category}.`,
       whoIsAffected: [
-        `Direct industry practitioners and consumers operating within ${category}`,
-        `Enterprises navigating compliance, supply chains, and technical infrastructure`,
-        `Policy makers, regulators, and institutional analysts monitoring global stability`,
-        `End users affected by pricing, privacy, or policy changes`
+        `Citizens, industry practitioners, and communities situated in ${region}`,
+        `Enterprises navigating regulatory standards, supply logistics, or funding`,
+        `Policy makers and civic administrators monitoring regional stability`,
+        `End consumers impacted by public service, tariff, or price changes`
       ],
       whatCouldHappenNext: [
-        `Institutional and market participants will assess compliance guidelines over the coming quarter.`,
-        `Secondary impacts may shift commercial benchmarks, supplier agreements, or regional enforcement.`,
-        `Follow-up technical or legal briefings are expected from primary regulatory bodies.`
+        `Administrative committees will release detailed operational guidelines over the coming days.`,
+        `Industry and institutional participants will calibrate their annual plans accordingly.`,
+        `Subsequent implementation milestones will be reviewed in upcoming government reviews.`
       ],
-      background: `Previous developments in ${category} established the baseline conditions leading up to this disclosure. Understanding this requires familiarity with domain foundations.`
+      background: `Previous developments in ${region} established the groundwork leading up to this disclosure. Understanding this event requires familiarity with core domain mechanisms.`
     };
 
-    // Generate 5 progressive explanation levels
+    // 5 Progressive Difficulty Levels
     const explanations = {
-      verySimple: `In simple words: "${title}". This matters because things in the real world are changing so people, businesses, and governments are adapting how they operate.`,
-      beginner: `Here is the essential idea: This event involves ${category}. When things change in this area, it creates a domino effect across related industries and daily decisions.`,
-      student: `Analytical breakdown: The core mechanism behind "${title}" operates through systemic relationships in ${category}. The key variables are regulatory oversight, market incentives, and technological capabilities.`,
-      technical: `Domain technicality: The incident or policy change shifts key structural parameters. Operational teams must review architectural dependencies, protocol compliance, and risk exposures in light of this update.`,
-      deepDive: `Systems & Strategic Analysis: Examining "${title}" reveals underlying macroeconomic and architectural incentives. Stakeholders must evaluate second-order equilibria and long-term equilibrium shifts.`
+      verySimple: `In simple words: "${title}". This matters because people, businesses, and leaders in ${region} are making important adjustments to keep things running better.`,
+      beginner: `Here is the essential takeaway: This development takes place in ${region} under ${category}. When policy or technology changes here, it creates a chain reaction for public services and everyday life.`,
+      student: `Analytical overview: The core mechanism of "${title}" operates through systemic relationships in ${category}. The key variables are governance oversight, market incentives, and technological execution in ${region}.`,
+      technical: `Domain technicality: The initiative shifts key structural parameters. Operational teams must review architectural dependencies, statutory compliance guidelines, and risk exposures in light of this update.`,
+      deepDive: `Systems & Strategic Analysis: Examining "${title}" reveals underlying macroeconomic and regional equilibria in ${region}. Stakeholders must evaluate second-order incentives and long-term institutional shifts.`
     };
 
-    // Contextual concepts
-    const concepts = (article.relatedConcepts && article.relatedConcepts.length > 0)
-      ? article.relatedConcepts.map(c => ({
+    // Concepts
+    const concepts = (event.relatedConcepts && event.relatedConcepts.length > 0)
+      ? event.relatedConcepts.map(c => ({
           id: c.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           title: c,
-          desc: `Core foundational concept essential for understanding developments in ${category}.`
+          desc: `Core foundational mechanism essential for understanding developments in ${category}.`
         }))
       : [
-          { id: 'foundations', title: 'Domain Foundations', desc: `Foundational mechanisms governing ${category}.` },
+          { id: 'public-policy', title: 'Public Policy', desc: `Governance and administrative frameworks in ${region}.` },
           { id: 'impact-analysis', title: 'Impact Analysis', desc: 'Evaluating primary and secondary consequences.' }
         ];
 
-    // Adaptive 3-question understanding quiz
+    // Adaptive 3-Question Understanding Quiz
     const quiz = [
       {
         id: 1,
-        question: `Based on the latest report on "${title.slice(0, 70)}...", what is the primary significance?`,
+        question: `Based on the latest reports on "${title.slice(0, 70)}...", what is the primary significance for ${region}?`,
         options: [
-          whyItMatters || 'It alters regulatory or operational standards in the sector.',
-          'It has zero connection to industry practices or real-world events.',
-          'It is a temporary social media rumor without verified reporting.',
-          'It automatically invalidates all previous scientific and economic laws.'
+          whyItMatters || `It impacts governance, technology, or economic operations in ${region}.`,
+          'It has zero connection to real-world affairs and can be disregarded.',
+          'It is an unverified social media rumor with zero news coverage.',
+          'It immediately stops all economic activity permanently.'
         ],
         correctIndex: 0,
-        explanation: 'Verified news reporting indicates direct influence on strategic and domain outcomes.'
+        explanation: 'Multi-source verified reporting confirms direct real-world significance.'
       },
       {
         id: 2,
-        question: `True or False: Developments in ${category} often generate secondary effects for businesses and everyday users.`,
+        question: `True or False: Developments in ${category} in ${region} typically create secondary effects for organizations and citizens.`,
         options: [
-          'True — Modern systems are interconnected, meaning policy and tech shifts ripple across sectors.',
-          'False — Real-world events operate in total isolation.'
+          'True — Modern systems are interconnected, so policy and tech shifts create regional ripple effects.',
+          'False — Real-world events have zero consequences.'
         ],
         correctIndex: 0,
-        explanation: 'Real-world events in policy, technology, and economics create cross-domain ripples.'
+        explanation: 'Modern policy, tech, and economic updates create systemic secondary effects.'
       },
       {
         id: 3,
-        question: `Scenario: An organization or individual is reviewing their strategy following this event. What is the most prudent first step?`,
+        question: `Scenario: A resident or business in ${region} is evaluating this announcement. What is the most prudent next step?`,
         options: [
-          'Analyze the verified facts, review domain prerequisites, and assess exposure.',
-          'Ignore all updates completely and make assumptions without reading sources.',
-          'Assume that nothing in the domain will ever change again.'
+          'Review verified sources, understand foundational concepts, and monitor official notifications.',
+          'Make hasty decisions based on hearsay without checking original sources.',
+          'Assume that laws and policies will never evolve.'
         ],
         correctIndex: 0,
-        explanation: 'Grounded understanding begins with reviewing verified source evidence and foundational concepts.'
+        explanation: 'Grounded decision-making starts with reviewing verified reports and foundational mechanisms.'
       }
     ];
 
     return {
-      article,
+      event,
       breakdown,
       explanations,
       concepts,

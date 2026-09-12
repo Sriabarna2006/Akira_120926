@@ -1,4 +1,6 @@
-export type ImportanceLevel = 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING';
+export type RegionType = 'Tamil Nadu' | 'India' | 'World';
+export type ImportanceLabelType = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
+export type ImportanceLevel = 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING' | ImportanceLabelType;
 
 export type CategorySlug = 
   | 'india' 
@@ -19,21 +21,21 @@ export interface Category {
   color: string;
 }
 
-export interface Source {
-  id: string;
+export interface CorroboratingSource {
   name: string;
-  siteUrl: string;
-  reliabilityTier: number;
+  url: string;
+  publishedAt: string;
+  tier: number;
 }
 
 export interface StructuredBreakdown {
   whatHappened: string;
   whyDidItHappen: string;
-  whyItMatters: string;
+  whyDoesItMatter: string;
   whoIsAffected: string[];
   whatCouldHappenNext: string[];
   background: string;
-  relatedConcepts: string[];
+  relatedConcepts?: string[];
 }
 
 export interface MultiLevelExplanation {
@@ -44,22 +46,27 @@ export interface MultiLevelExplanation {
   deepDive: string;
 }
 
-export interface Article {
+export interface CanonicalEvent {
   id: string;
   title: string;
   summary: string;
-  fullContent?: string;
-  category: Category;
-  source: Source;
-  originalUrl: string;
-  publishedAt: string;
-  importanceLevel: ImportanceLevel;
+  region: RegionType;
+  category: string;
+  importanceLabel: ImportanceLabelType;
   importanceScore: number;
+  trendScore: number;
+  finalRankScore: number;
   whyItMatters: string;
-  realWorldImpact: string;
   estimatedReadTime: string;
-  structuredBreakdown?: StructuredBreakdown;
-  multiLevelExplanation?: MultiLevelExplanation;
+  relatedConcepts: string[];
+  sources: CorroboratingSource[];
+  firstPublishedAt: string;
+  lastUpdatedAt: string;
+  sourceCount: number;
+  breakdown?: StructuredBreakdown;
+  explanations?: MultiLevelExplanation;
+  concepts?: { id: string; title: string; desc: string }[];
+  quiz?: QuizQuestion[];
   isSaved?: boolean;
 }
 
@@ -81,30 +88,21 @@ export interface Concept {
 }
 
 export interface QuizQuestion {
-  id: string;
-  articleId?: string;
-  conceptId?: string;
-  questionText: string;
-  questionType: 'multiple_choice' | 'true_false' | 'scenario';
+  id: number;
+  question: string;
   options: string[];
-  correctOptionIndex: number;
-  explanation: string;
-}
-
-export interface QuizAttemptResult {
-  questionId: string;
-  selectedOptionIndex: number;
-  isCorrect: boolean;
+  correctIndex: number;
   explanation: string;
 }
 
 export interface CategoryProgress {
-  category: Category;
+  category: string;
   percentage: number;
   articlesReadCount: number;
   conceptsMasteredCount: number;
   quizzesTakenCount: number;
   averageQuizScore: number;
+  color: string;
 }
 
 export interface UserKnowledgeProfile {

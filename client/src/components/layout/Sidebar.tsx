@@ -4,7 +4,6 @@ import {
   LayoutDashboard, 
   Flame, 
   Radio,
-  Compass, 
   GraduationCap, 
   Bookmark, 
   BarChart3, 
@@ -27,9 +26,9 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const mainNavItems = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/all-news', label: 'All News Stream', icon: Radio, badge: 'Live' },
-    { to: '/daily-brief', label: 'Daily Brief', icon: Flame },
-    { to: '/explore', label: 'Explore Events', icon: Compass },
+    { to: '/live', label: 'Live & Trending', icon: Radio, badge: 'Top 10' },
+    { to: '/all-news', label: 'All News Stream', icon: Flame },
+    { to: '/daily-brief', label: 'Daily Brief', icon: Sparkles },
     { to: '/learn', label: 'Learn Concepts', icon: GraduationCap },
     { to: '/knowledge', label: 'My Knowledge', icon: BarChart3 },
     { to: '/library', label: 'My Library', icon: Bookmark },

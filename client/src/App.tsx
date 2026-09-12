@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
+import { LiveTrendingPage } from './pages/LiveTrendingPage';
 import { AllNewsPage } from './pages/AllNewsPage';
 import { DailyBriefPage } from './pages/DailyBriefPage';
 import { EventDetailPage } from './pages/EventDetailPage';
@@ -29,6 +30,7 @@ export const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
+            <Route path="live" element={<LiveTrendingPage />} />
             <Route path="all-news" element={<AllNewsPage />} />
             <Route path="daily-brief" element={<DailyBriefPage />} />
             <Route path="explore" element={<AllNewsPage />} />

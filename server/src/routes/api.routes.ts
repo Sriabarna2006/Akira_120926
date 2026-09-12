@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { getLiveNewsStream, syncLiveNews, getDailyBrief, getArticleById } from '../controllers/news.controller.js';
+import { 
+  getTop10LiveEvents, 
+  getLiveEventsStream, 
+  syncLiveNews, 
+  getDailyBrief, 
+  getEventById 
+} from '../controllers/news.controller.js';
 import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
 
 const router = Router();
@@ -13,15 +19,17 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Live News Stream & Feed Sync
-router.get('/news/live', getLiveNewsStream);
-router.post('/news/sync', syncLiveNews);
+// 🔴 LIVE & TRENDING Endpoints
+router.get('/live/top', getTop10LiveEvents);
+router.get('/live', getLiveEventsStream);
+router.post('/live/sync', syncLiveNews);
 
-// Daily Brief & Article Details
+// ☀️ DAILY BRIEF & EVENT BREAKDOWNS
 router.get('/daily-brief', getDailyBrief);
-router.get('/articles/:id', getArticleById);
+router.get('/events/:id', getEventById);
+router.get('/articles/:id', getEventById); // alias for backwards compatibility
 
-// Concepts & Learning Loop
+// 🎓 CONCEPTS & LEARNING LOOP
 router.get('/concepts', getConcepts);
 router.post('/quiz/submit', submitQuiz);
 

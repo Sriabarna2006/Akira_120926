@@ -2,20 +2,40 @@ import { Request, Response } from 'express';
 import { newsIngestionService } from '../services/newsIngestion.service.js';
 import { aiExplainerService } from '../services/aiExplainer.service.js';
 
-export const getLiveNewsStream = async (req: Request, res: Response) => {
+export const getTop10LiveEvents = async (req: Request, res: Response) => {
   try {
-    const { category, importance, search, limit } = req.query;
+    const { region } = req.query;
+    const top10 = newsIngestionService.getTop10LiveEvents(region as string);
 
-    const result = newsIngestionService.getAllArticles({
+    res.json({
+      success: true,
+      data: top10,
+      meta: {
+        count: top10.length,
+        regionFilter: region || 'ALL',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message || 'Failed to fetch Top 10 live events' });
+  }
+};
+
+export const getLiveEventsStream = async (req: Request, res: Response) => {
+  try {
+    const { region, category, label, search, limit } = req.query;
+
+    const result = newsIngestionService.getAllEvents({
+      region: region as string,
       category: category as string,
-      importance: importance as string,
+      label: label as string,
       search: search as string,
       limit: limit ? parseInt(limit as string, 10) : undefined,
     });
 
     res.json({
       success: true,
-      data: result.articles,
+      data: result.events,
       meta: {
         total: result.total,
         lastSyncTime: result.lastSyncTime,
@@ -23,7 +43,7 @@ export const getLiveNewsStream = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message || 'Failed to fetch live news' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to fetch live events' });
   }
 };
 
@@ -32,7 +52,7 @@ export const syncLiveNews = async (req: Request, res: Response) => {
     const result = await newsIngestionService.syncAllFeeds();
     res.json({
       success: true,
-      message: `Successfully synced news feeds. Added ${result.newCount} new articles.`,
+      message: `Successfully synced news feeds across Tamil Nadu, India, and World. Added ${result.newCount} new events.`,
       data: result,
     });
   } catch (error: any) {
@@ -42,19 +62,17 @@ export const syncLiveNews = async (req: Request, res: Response) => {
 
 export const getDailyBrief = async (req: Request, res: Response) => {
   try {
-    const all = newsIngestionService.getAllArticles();
-    // Prioritize MUST_KNOW and top scored articles for the brief
-    const topBriefs = all.articles
-      .sort((a, b) => b.importanceScore - a.importanceScore)
-      .slice(0, 10);
+    const top10 = newsIngestionService.getTop10LiveEvents();
+    // Curate top 6 high-impact events for the Daily Brief
+    const curatedBrief = top10.slice(0, 6);
 
     res.json({
       success: true,
-      data: topBriefs,
+      data: curatedBrief,
       meta: {
-        totalEventsParsed: all.total,
-        highImpactSelected: topBriefs.length,
-        lastSyncTime: all.lastSyncTime,
+        totalParsed: top10.length,
+        curatedCount: curatedBrief.length,
+        timestamp: new Date().toISOString(),
       }
     });
   } catch (error: any) {
@@ -62,22 +80,21 @@ export const getDailyBrief = async (req: Request, res: Response) => {
   }
 };
 
-export const getArticleById = async (req: Request, res: Response) => {
+export const getEventById = async (req: Request, res: Response) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const article = newsIngestionService.getArticleById(id);
+    const event = newsIngestionService.getEventById(id);
 
-    if (!article) {
-      // Fallback if not found
-      return res.status(404).json({ success: false, error: 'Article not found' });
+    if (!event) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
     }
 
-    const fullAnalysis = aiExplainerService.generateAnalysisForArticle(article);
+    const fullAnalysis = aiExplainerService.generateAnalysisForEvent(event);
 
     res.json({
       success: true,
       data: {
-        ...article,
+        ...event,
         breakdown: fullAnalysis.breakdown,
         explanations: fullAnalysis.explanations,
         concepts: fullAnalysis.concepts,
@@ -85,6 +102,6 @@ export const getArticleById = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message || 'Failed to retrieve article details' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to retrieve event details' });
   }
 };
