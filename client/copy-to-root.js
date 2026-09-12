@@ -4,14 +4,11 @@ import path from 'path';
 const clientDist = path.resolve('dist');
 const rootDist = path.resolve('../dist');
 
-try {
-  if (fs.existsSync(clientDist)) {
-    if (!fs.existsSync(rootDist)) {
-      fs.mkdirSync(rootDist, { recursive: true });
-    }
+if (fs.existsSync(clientDist)) {
+  try {
     fs.cpSync(clientDist, rootDist, { recursive: true, force: true });
-    console.log('✓ Synced client/dist -> ../dist');
+    console.log('✓ Successfully synced client/dist -> ../dist');
+  } catch (e) {
+    // Ignore error if in restricted container
   }
-} catch (e) {
-  // ignore if in isolated container
 }
