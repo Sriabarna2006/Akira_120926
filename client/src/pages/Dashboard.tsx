@@ -13,39 +13,49 @@ import {
   Radio
 } from 'lucide-react';
 import { apiClient } from '../services/api';
-
-interface ArticleItem {
-  id: string;
-  title: string;
-  summary: string;
-  category: string;
-  source: string;
-  originalUrl: string;
-  publishedAt: string;
-  importanceLevel: 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING';
-  importanceScore: number;
-  whyItMatters: string;
-  estimatedReadTime: string;
-  relatedConcepts: string[];
-}
+import { CanonicalEvent } from '../types';
 
 export const Dashboard: React.FC = () => {
-  const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [articles, setArticles] = useState<CanonicalEvent[]>([]);
   const [totalLiveCount, setTotalLiveCount] = useState<number>(100);
 
   useEffect(() => {
-    apiClient.get('/news/live')
-      .then((res) => {
+    const fetchLiveFeed = async () => {
+      try {
+        let res;
+        try {
+          res = await apiClient.get('/live');
+        } catch {
+          res = await apiClient.get('/news/live');
+        }
         if (res.data?.success && res.data.data?.length > 0) {
           setArticles(res.data.data);
           setTotalLiveCount(res.data.meta?.total || res.data.data.length);
         }
-      })
-      .catch((err) => console.error('Failed to load dashboard live feed:', err));
+      } catch (err) {
+        console.warn('Dashboard live feed load notice:', err);
+      }
+    };
+
+    fetchLiveFeed();
   }, []);
 
   // Use the top scored article as the spotlight
-  const topStory = articles.length > 0 ? articles[0] : {
+  const rawTopStory = articles.length > 0 ? articles[0] : null;
+  const topStory = rawTopStory ? {
+    id: rawTopStory.id,
+    title: rawTopStory.title,
+    summary: rawTopStory.summary,
+    category: rawTopStory.category,
+    source: rawTopStory.sources?.[0]?.name || rawTopStory.source || 'Live Wire',
+    originalUrl: rawTopStory.sources?.[0]?.url || rawTopStory.originalUrl || '#',
+    publishedAt: rawTopStory.lastUpdatedAt || rawTopStory.firstPublishedAt || rawTopStory.publishedAt || new Date().toISOString(),
+    importanceLevel: rawTopStory.importanceLabel || rawTopStory.importanceLevel || 'BREAKING',
+    importanceScore: rawTopStory.importanceScore || 92,
+    whyItMatters: rawTopStory.whyItMatters || 'Directly shapes high-impact decisions across the sector.',
+    estimatedReadTime: rawTopStory.estimatedReadTime || '3 min read',
+    relatedConcepts: rawTopStory.relatedConcepts || ['Inflation', 'Interest Rates', 'Monetary Policy', 'Central Banking']
+  } : {
     id: 'story-1',
     title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
     summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
@@ -53,14 +63,27 @@ export const Dashboard: React.FC = () => {
     source: 'Financial Times / Reuters',
     originalUrl: 'https://reuters.com',
     publishedAt: new Date().toISOString(),
-    importanceLevel: 'MUST_KNOW' as const,
+    importanceLevel: 'MUST_KNOW',
     importanceScore: 92,
     whyItMatters: 'Directly impacts home loan EMIs, business borrowing costs, currency exchange rates, and consumer purchasing power.',
     estimatedReadTime: '3 min read',
     relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy', 'Central Banking']
   };
 
-  const trendingBriefs = articles.length > 1 ? articles.slice(1, 5) : [
+  const trendingBriefs = articles.length > 1 ? articles.slice(1, 5).map(a => ({
+    id: a.id,
+    title: a.title,
+    summary: a.summary,
+    category: a.category,
+    source: a.sources?.[0]?.name || a.source || 'Live Wire',
+    originalUrl: a.sources?.[0]?.url || a.originalUrl || '#',
+    publishedAt: a.lastUpdatedAt || a.firstPublishedAt || a.publishedAt || new Date().toISOString(),
+    importanceLevel: a.importanceLabel || a.importanceLevel || 'IMPORTANT',
+    importanceScore: a.importanceScore || 80,
+    whyItMatters: a.whyItMatters || 'Shapes institutional operational conditions across the domain.',
+    estimatedReadTime: a.estimatedReadTime || '3 min read',
+    relatedConcepts: a.relatedConcepts || []
+  })) : [
     {
       id: 'story-2',
       title: 'EU Enforces Comprehensive AI Act: What High-Risk AI Classification Means for Tech',
@@ -69,7 +92,7 @@ export const Dashboard: React.FC = () => {
       source: 'MIT Technology Review',
       originalUrl: 'https://technologyreview.com',
       publishedAt: new Date().toISOString(),
-      importanceLevel: 'MUST_KNOW' as const,
+      importanceLevel: 'MUST_KNOW',
       importanceScore: 89,
       whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.',
       estimatedReadTime: '4 min read',
@@ -83,7 +106,7 @@ export const Dashboard: React.FC = () => {
       source: 'Wired Security',
       originalUrl: 'https://wired.com',
       publishedAt: new Date().toISOString(),
-      importanceLevel: 'IMPORTANT' as const,
+      importanceLevel: 'IMPORTANT',
       importanceScore: 78,
       whyItMatters: 'Requires immediate enterprise patching to prevent unauthorized session hijacking across cloud deployments.',
       estimatedReadTime: '2 min read',
@@ -135,7 +158,7 @@ export const Dashboard: React.FC = () => {
         
         <div className="flex flex-wrap items-center gap-2.5 mb-4">
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-            {topStory.importanceLevel.replace('_', ' ')} • Score {topStory.importanceScore}/100
+            {(topStory.importanceLevel || 'BREAKING').replace('_', ' ')} • Score {topStory.importanceScore}/100
           </span>
           <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             {topStory.category}
@@ -229,7 +252,7 @@ export const Dashboard: React.FC = () => {
               >
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={brief.importanceLevel === 'MUST_KNOW' ? 'badge-must-know text-[10px] font-bold px-2 py-0.5 rounded-full' : 'badge-important text-[10px] font-bold px-2 py-0.5 rounded-full'}>
+                    <span className={(brief.importanceLevel === 'MUST_KNOW' || brief.importanceLevel === 'BREAKING') ? 'badge-must-know text-[10px] font-bold px-2 py-0.5 rounded-full' : 'badge-important text-[10px] font-bold px-2 py-0.5 rounded-full'}>
                       {brief.importanceLevel.replace('_', ' ')} • {brief.importanceScore}/100
                     </span>
                     <span className="text-[11px] text-slate-400">{brief.category}</span>

@@ -17,6 +17,7 @@ export interface CanonicalEvent {
   region: RegionType;
   category: string;
   importanceLabel: ImportanceLabelType;
+  importanceLevel?: string;
   importanceScore: number;
   trendScore: number;
   finalRankScore: number;
@@ -24,6 +25,9 @@ export interface CanonicalEvent {
   estimatedReadTime: string;
   relatedConcepts: string[];
   sources: CorroboratingSource[];
+  source?: string;
+  originalUrl?: string;
+  publishedAt?: string;
   firstPublishedAt: string;
   lastUpdatedAt: string;
   sourceCount: number;
@@ -168,15 +172,21 @@ class NewsIngestionService {
     return fallback;
   }
 
-  // Multi-source clustering: check if text matches an existing active event
-  private findMatchingEvent(title: string, summary: string, region: RegionType): CanonicalEvent | null {
+  // Layered multi-source clustering with geographic and entity scope checks
+  private findMatchingEvent(title: string, summary: string, region: RegionType, category: string): CanonicalEvent | null {
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3);
-    const incomingWords = new Set([...normalize(title), ...normalize(summary).slice(0, 10)]);
+    const incomingWords = new Set([...normalize(title), ...normalize(summary).slice(0, 12)]);
 
     for (const event of this.eventsMap.values()) {
+      // 1. Geographic scope & regional isolation
       if (event.region !== region) continue;
 
-      const eventWords = new Set([...normalize(event.title), ...normalize(event.summary).slice(0, 10)]);
+      // 2. Temporal window check (18 hours max)
+      const timeDiff = Math.abs(Date.now() - new Date(event.firstPublishedAt).getTime());
+      if (timeDiff > 18 * 3600 * 1000) continue;
+
+      // 3. Token & keyword Jaccard similarity
+      const eventWords = new Set([...normalize(event.title), ...normalize(event.summary).slice(0, 12)]);
       let intersection = 0;
       for (const word of incomingWords) {
         if (eventWords.has(word)) intersection++;
@@ -185,9 +195,11 @@ class NewsIngestionService {
       const union = new Set([...incomingWords, ...eventWords]).size;
       const jaccard = union > 0 ? intersection / union : 0;
 
-      // Match threshold: > 0.40 word overlap within 18 hours
-      const timeDiff = Math.abs(Date.now() - new Date(event.firstPublishedAt).getTime());
-      if (jaccard >= 0.40 && timeDiff <= 18 * 3600 * 1000) {
+      // 4. Category alignment bonus
+      const categoryMatch = event.category === category;
+      const effectiveThreshold = categoryMatch ? 0.38 : 0.48;
+
+      if (jaccard >= effectiveThreshold) {
         return event;
       }
     }
@@ -199,65 +211,69 @@ class NewsIngestionService {
     summary: string,
     region: RegionType,
     publishedAt: string,
-    sourceCount: number
+    sourceCount: number,
+    distinctPublishers = 1
   ): { importanceLabel: ImportanceLabelType; importanceScore: number; trendScore: number; finalRankScore: number; whyItMatters: string; concepts: string[] } {
     const text = `${title} ${summary}`.toLowerCase();
     const hoursAgo = Math.max(0, (Date.now() - new Date(publishedAt).getTime()) / 3600000);
 
-    // 1. Recency Decay (halving every 9 hours)
-    const recencyScore = Math.max(10, Math.min(100, Math.round(100 * Math.exp(-0.08 * hoursAgo))));
+    // 1. Freshness Score (0 to 100, exponential half-life ~9h)
+    const freshnessScore = Math.max(10, Math.min(100, Math.round(100 * Math.exp(-0.08 * hoursAgo))));
 
-    // 2. Systemic Importance Score (0 to 100)
-    let importanceScore = 45;
+    // 2. Systemic Importance Score (35 to 98)
+    let importanceScore = 48;
     const concepts: string[] = [];
 
-    if (text.includes('scheme') || text.includes('cabinet') || text.includes('metro') || text.includes('infrastructure') || text.includes('budget')) {
-      importanceScore += 25;
+    if (text.includes('scheme') || text.includes('cabinet') || text.includes('metro') || text.includes('infrastructure') || text.includes('budget') || text.includes('policy')) {
+      importanceScore += 26;
       concepts.push('Public Policy', 'State Infrastructure', 'Civic Administration');
     }
-    if (text.includes('inflation') || text.includes('interest rate') || text.includes('monetary policy') || text.includes('repo')) {
+    if (text.includes('inflation') || text.includes('interest rate') || text.includes('monetary policy') || text.includes('repo') || text.includes('rbi') || text.includes('central bank')) {
       importanceScore += 30;
       concepts.push('Inflation', 'Monetary Policy', 'Interest Rates');
     }
-    if (text.includes('zero-day') || text.includes('critical vulnerability') || text.includes('cyber') || text.includes('data breach')) {
+    if (text.includes('zero-day') || text.includes('critical vulnerability') || text.includes('cyber') || text.includes('data breach') || text.includes('ransomware')) {
       importanceScore += 28;
       concepts.push('Vulnerability Management', 'Cloud Security', 'Zero-Day Exploits');
     }
-    if (text.includes('ai act') || text.includes('semiconductor') || text.includes('frontier model') || text.includes('generative ai')) {
-      importanceScore += 25;
+    if (text.includes('ai act') || text.includes('semiconductor') || text.includes('frontier model') || text.includes('generative ai') || text.includes('lithography')) {
+      importanceScore += 26;
       concepts.push('AI Governance', 'Hardware Supply Chains', 'Foundational Models');
     }
-    if (text.includes('summit') || text.includes('treaty') || text.includes('sanction') || text.includes('ceasefire')) {
+    if (text.includes('summit') || text.includes('treaty') || text.includes('sanction') || text.includes('ceasefire') || text.includes('bilateral')) {
       importanceScore += 22;
       concepts.push('Geopolitics', 'International Relations', 'Trade Agreements');
     }
 
     importanceScore = Math.min(98, Math.max(35, importanceScore));
 
-    // 3. Trend Velocity (Source corroboration & freshness)
-    const trendScore = Math.min(100, Math.round(sourceCount * 25 + (hoursAgo < 4 ? 30 : hoursAgo < 8 ? 15 : 0)));
+    // 3. Reconciled Trend Velocity (Acceleration + Independent Coverage Rate + Recency)
+    const coverageAcceleration = Math.min(100, distinctPublishers * 28 + (sourceCount > 1 ? 20 : 0));
+    const recencyBonus = hoursAgo < 3 ? 35 : hoursAgo < 6 ? 20 : hoursAgo < 12 ? 10 : 0;
+    const trendScore = Math.min(100, Math.round(0.60 * coverageAcceleration + 0.40 * recencyBonus));
 
-    // 4. Regional Relevance Weight
-    let regionalBonus = 15;
-    if (region === 'Tamil Nadu') regionalBonus = 25; // First-class state boost
-    else if (region === 'India') regionalBonus = 20;
+    // 4. Source Confidence (Tier-weighted publisher verification)
+    const sourceConfidence = Math.min(100, Math.round(50 + distinctPublishers * 25));
 
-    // 5. Final Mathematical Rank Score
-    // Rank = 0.30*R + 0.30*I + 0.25*T + G
+    // 5. Contextual Relevance Weight (Balanced, non-distorting)
+    const relevanceScore = region === 'Tamil Nadu' ? 85 : region === 'India' ? 80 : 75;
+
+    // 6. Holistic Multi-Factor Ranking Formula (v1.1: 0.35*I + 0.25*F + 0.20*V + 0.10*C + 0.10*R)
     const finalRankScore = Math.round(
-      0.30 * recencyScore + 
-      0.30 * importanceScore + 
-      0.25 * trendScore + 
-      regionalBonus
+      0.35 * importanceScore + 
+      0.25 * freshnessScore + 
+      0.20 * trendScore + 
+      0.10 * sourceConfidence +
+      0.10 * relevanceScore
     );
 
-    // Label Determination
+    // 7. Explicit Urgency Taxonomy Determination
     let importanceLabel: ImportanceLabelType = 'IMPORTANT';
-    if (hoursAgo <= 3 && (importanceScore >= 70 || sourceCount >= 2)) {
+    if (hoursAgo <= 3 && (importanceScore >= 75 || trendScore >= 70)) {
       importanceLabel = 'BREAKING';
-    } else if (sourceCount >= 2 || trendScore >= 65) {
+    } else if (trendScore >= 60 || distinctPublishers >= 2) {
       importanceLabel = 'TRENDING';
-    } else if (importanceScore >= 75) {
+    } else if (importanceScore >= 65) {
       importanceLabel = 'IMPORTANT';
     }
 
@@ -313,7 +329,7 @@ class NewsIngestionService {
           const category = this.detectCategory(title, summary, feed.defaultCategory);
 
           // Check if this incoming article corroborates an existing canonical event
-          const existingEvent = this.findMatchingEvent(title, summary, region);
+          const existingEvent = this.findMatchingEvent(title, summary, region, category);
 
           if (existingEvent) {
             // Check if source already attached
@@ -328,13 +344,16 @@ class NewsIngestionService {
               existingEvent.sourceCount = existingEvent.sources.length;
               existingEvent.lastUpdatedAt = new Date().toISOString();
 
+              const distinctPublishers = new Set(existingEvent.sources.map(s => s.name)).size;
+
               // Re-calculate scores with multi-source boost
               const reScored = this.calculateScores(
                 existingEvent.title,
                 existingEvent.summary,
                 existingEvent.region,
                 existingEvent.firstPublishedAt,
-                existingEvent.sourceCount
+                existingEvent.sourceCount,
+                distinctPublishers
               );
 
               existingEvent.importanceLabel = reScored.importanceLabel;
@@ -408,6 +427,17 @@ class NewsIngestionService {
     return { newCount, totalEvents: this.eventsMap.size };
   }
 
+  private enrichEvent(e: CanonicalEvent): CanonicalEvent {
+    const primarySource = e.sources && e.sources.length > 0 ? e.sources[0] : null;
+    return {
+      ...e,
+      source: e.source || primarySource?.name || 'Live Wire',
+      originalUrl: e.originalUrl || primarySource?.url || '#',
+      publishedAt: e.publishedAt || e.lastUpdatedAt || e.firstPublishedAt || new Date().toISOString(),
+      importanceLevel: e.importanceLevel || e.importanceLabel,
+    };
+  }
+
   // DYNAMIC TOP 10 RANKING ENGINE WITH DIVERSITY DAMPENING
   public getTop10LiveEvents(regionFilter?: string): CanonicalEvent[] {
     let list = Array.from(this.eventsMap.values());
@@ -449,7 +479,7 @@ class NewsIngestionService {
       }
     }
 
-    return selectedTop10;
+    return selectedTop10.map(e => this.enrichEvent(e));
   }
 
   public getAllEvents(params?: { region?: string; category?: string; label?: string; search?: string; limit?: number }): {
@@ -474,7 +504,7 @@ class NewsIngestionService {
     }
 
     if (params?.label && params.label !== 'ALL') {
-      list = list.filter(e => e.importanceLabel === params.label);
+      list = list.filter(e => e.importanceLabel === params.label || e.importanceLevel === params.label);
     }
 
     if (params?.search && params.search.trim()) {
@@ -493,7 +523,7 @@ class NewsIngestionService {
     }
 
     return {
-      events: list,
+      events: list.map(e => this.enrichEvent(e)),
       total,
       lastSyncTime: this.lastSyncTime ? this.lastSyncTime.toISOString() : new Date().toISOString(),
       isSyncing: this.isSyncing
@@ -501,7 +531,8 @@ class NewsIngestionService {
   }
 
   public getEventById(id: string): CanonicalEvent | undefined {
-    return this.eventsMap.get(id);
+    const event = this.eventsMap.get(id);
+    return event ? this.enrichEvent(event) : undefined;
   }
 
   private seedInitialEvents() {

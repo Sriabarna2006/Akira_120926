@@ -182,7 +182,7 @@ export const EventDetailPage: React.FC = () => {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full">
-            {eventData.importanceLevel.replace('_', ' ')} • Score {eventData.importanceScore}/100
+            {((eventData as any).importanceLabel || eventData.importanceLevel || 'IMPORTANT').replace('_', ' ')} • Score {eventData.importanceScore}/100
           </span>
           <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             {eventData.category}
@@ -197,17 +197,38 @@ export const EventDetailPage: React.FC = () => {
         </h1>
 
         {/* Source citation banner */}
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-between text-xs text-slate-400">
-          <span>Reported by: <strong className="text-slate-200">{eventData.source}</strong></span>
-          <a 
-            href={eventData.originalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium"
-          >
-            <span>View Verified Source</span>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+        <div className="p-3.5 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-slate-300 font-semibold">Reported by:</span>
+            {((eventData as any).sources && (eventData as any).sources.length > 0) ? (
+              (eventData as any).sources.map((src: any, i: number) => (
+                <a
+                  key={i}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 hover:text-white border border-slate-700/60 flex items-center gap-1 font-medium transition-colors"
+                >
+                  <span>{src.name}</span>
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              ))
+            ) : (
+              <span className="text-slate-200 font-medium">{eventData.source}</span>
+            )}
+          </div>
+
+          {eventData.originalUrl && (
+            <a 
+              href={eventData.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-400 hover:text-brand-300 flex items-center gap-1 font-semibold"
+            >
+              <span>Original Wire</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
       </div>
 

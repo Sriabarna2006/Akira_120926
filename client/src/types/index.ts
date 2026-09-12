@@ -53,6 +53,7 @@ export interface CanonicalEvent {
   region: RegionType;
   category: string;
   importanceLabel: ImportanceLabelType;
+  importanceLevel?: string;
   importanceScore: number;
   trendScore: number;
   finalRankScore: number;
@@ -60,6 +61,9 @@ export interface CanonicalEvent {
   estimatedReadTime: string;
   relatedConcepts: string[];
   sources: CorroboratingSource[];
+  source?: string;
+  originalUrl?: string;
+  publishedAt?: string;
   firstPublishedAt: string;
   lastUpdatedAt: string;
   sourceCount: number;

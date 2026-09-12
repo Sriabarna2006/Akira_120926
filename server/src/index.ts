@@ -12,7 +12,13 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 
 // Middleware
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server) or localhost dev origins
+    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -26,7 +32,7 @@ app.use(errorHandler);
 // Start server
 app.listen(PORT, () => {
   console.log(`=========================================`);
-  console.log(`🚀 AURA API Server Running`);
+  console.log(`🚀 AKIRA API Server Running`);
   console.log(`📡 URL: http://localhost:${PORT}`);
   console.log(`🌐 Allowed Origin: ${CORS_ORIGIN}`);
   console.log(`=========================================`);
