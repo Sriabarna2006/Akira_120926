@@ -1,293 +1,222 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  BookOpen, 
+  Lightbulb, 
+  ArrowRight, 
+  Calendar, 
+  GraduationCap, 
+  CheckCircle2
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Flame, Clock, ArrowRight, ExternalLink, Sparkles, RotateCw, BookOpen } from 'lucide-react';
-import { apiClient } from '../services/api';
+import { eventService } from '../services/eventService';
 import { CanonicalEvent } from '../types';
+import { BriefCard } from '../components/cards/BriefCard';
+import { LoadingState } from '../components/common/LoadingState';
 
 export const DailyBriefPage: React.FC = () => {
-  const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [briefs, setBriefs] = useState<CanonicalEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
 
-  const fetchBriefs = async () => {
-    try {
-      setLoading(true);
-      let res;
-      try {
-        res = await apiClient.get('/daily-brief');
-      } catch {
-        res = await apiClient.get('/news/daily-brief');
-      }
-
-      if (res.data?.success && res.data.data?.length > 0) {
-        setBriefs(res.data.data);
-      }
-    } catch (err) {
-      console.warn('Daily brief load fallback:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBriefs();
-  }, []);
-
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
-      await apiClient.post('/live/sync');
-      await fetchBriefs();
-    } catch (err) {
-      console.warn('Sync notice:', err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const fallbackBriefs: CanonicalEvent[] = [
-    {
-      id: 'story-1',
-      title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
-      category: 'Economy & Money',
-      region: 'India',
-      source: 'Financial Times / Reuters',
-      originalUrl: 'https://reuters.com',
-      firstPublishedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      lastUpdatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      publishedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      importanceLabel: 'BREAKING',
-      importanceLevel: 'MUST_KNOW',
-      importanceScore: 92,
-      trendScore: 85,
-      finalRankScore: 95,
-      sourceCount: 2,
-      sources: [{ name: 'Financial Times', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 }],
-      summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
-      whyItMatters: 'Directly impacts home loan EMIs, business borrowing costs, currency exchange rates, and consumer purchasing power.',
-      estimatedReadTime: '3 min read',
-      relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy']
-    },
-    {
-      id: 'story-2',
-      title: 'EU Enforces Comprehensive AI Act: What High-Risk AI Classification Means for Tech',
-      category: 'AI & Technology',
-      region: 'World',
-      source: 'MIT Technology Review',
-      originalUrl: 'https://technologyreview.com',
-      firstPublishedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-      lastUpdatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-      publishedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-      importanceLabel: 'BREAKING',
-      importanceLevel: 'MUST_KNOW',
-      importanceScore: 89,
-      trendScore: 82,
-      finalRankScore: 92,
-      sourceCount: 2,
-      sources: [{ name: 'MIT Tech Review', url: 'https://technologyreview.com', publishedAt: new Date().toISOString(), tier: 1 }],
-      summary: 'The landmark European AI framework enters legal enforcement, requiring strict audits for biometric identification and generative foundational models.',
-      whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.',
-      estimatedReadTime: '4 min read',
-      relatedConcepts: ['AI Governance', 'Algorithmic Auditing', 'Compliance Frameworks']
-    },
-    {
-      id: 'story-3',
-      title: 'Critical Zero-Day Vulnerability Discovered in Cloud Identity Infrastructure',
-      category: 'Cybersecurity',
-      region: 'World',
-      source: 'Wired Security',
-      originalUrl: 'https://wired.com',
-      firstPublishedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-      lastUpdatedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-      publishedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-      importanceLabel: 'IMPORTANT',
-      importanceLevel: 'IMPORTANT',
-      importanceScore: 78,
-      trendScore: 75,
-      finalRankScore: 85,
-      sourceCount: 2,
-      sources: [{ name: 'Wired', url: 'https://wired.com', publishedAt: new Date().toISOString(), tier: 1 }],
-      summary: 'Security researchers unveil a token forging vulnerability allowing cross-tenant privilege escalation in multi-cloud SSO identity providers.',
-      whyItMatters: 'Requires immediate enterprise patching to prevent unauthorized session hijacking across global cloud deployments.',
-      estimatedReadTime: '2 min read',
-      relatedConcepts: ['OAuth / JWT Tokens', 'Zero-Day Exploits', 'SSO Architecture']
-    }
-  ];
-
-  const activeList = briefs.length > 0 ? briefs : fallbackBriefs;
-
-  const filteredBriefs = activeList.filter((b) => {
-    if (filterLevel === 'ALL') return true;
-    const label = (b.importanceLabel || b.importanceLevel || '').toUpperCase();
-    if (filterLevel === 'MUST_KNOW') return label === 'MUST_KNOW' || label === 'BREAKING';
-    return label === filterLevel;
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
   });
 
-  const formatRelativeTime = (isoString?: string) => {
-    if (!isoString) return 'Today';
-    try {
-      const parsed = new Date(isoString).getTime();
-      if (isNaN(parsed)) return 'Today';
-      const diffMs = Date.now() - parsed;
-      const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins}m ago`;
-      const diffHours = Math.floor(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}h ago`;
-      return `${Math.floor(diffHours / 24)}d ago`;
-    } catch {
-      return 'Today';
+  useEffect(() => {
+    async function loadBriefs() {
+      setLoading(true);
+      try {
+        const data = await eventService.getDailyBrief();
+        if (data.length > 0) {
+          setBriefs(data);
+        } else {
+          // Structured Daily Brief UI Shell Placeholder
+          setBriefs([
+            {
+              id: 'story-1',
+              title: 'Global Central Banks Shift Monetary Policy Stance: Navigating Disinflation and Growth',
+              summary: 'Monetary policy committees across major economies announce rate corridor recalibrations as structural price pressures ease, altering corporate borrowing costs and mortgage rates worldwide.',
+              category: 'Economy & Money',
+              region: 'World',
+              importanceLabel: 'IMPORTANT',
+              importanceScore: 95,
+              finalRankScore: 98,
+              whyItMatters: 'Directly influences personal home loans, commercial capital expenditure, currency exchange volatility, and global consumer confidence.',
+              estimatedReadTime: '4 min read',
+              relatedConcepts: ['Monetary Policy', 'Inflation Hedging', 'Central Bank Mandates', 'Interest Rate Parity'],
+              firstPublishedAt: new Date().toISOString(),
+              lastUpdatedAt: new Date().toISOString(),
+              sourceCount: 3,
+              sources: [
+                { name: 'Financial Times', url: 'https://ft.com', publishedAt: new Date().toISOString(), tier: 1 },
+                { name: 'Reuters', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 },
+              ],
+            },
+            {
+              id: 'story-2',
+              title: 'European Union Enforces Landmark AI Act: Strict Compliance for High-Risk Systems',
+              summary: 'The comprehensive artificial intelligence governance framework takes effect, classifying AI models by societal risk and mandating algorithmic auditing for foundational systems.',
+              category: 'AI & Technology',
+              region: 'World',
+              importanceLabel: 'IMPORTANT',
+              importanceScore: 91,
+              finalRankScore: 93,
+              whyItMatters: 'Establishes the worldwide legal benchmark for AI safety, algorithmic transparency, intellectual property rights, and commercial deployments.',
+              estimatedReadTime: '5 min read',
+              relatedConcepts: ['AI Governance', 'Algorithmic Auditing', 'Risk Classification', 'Data Privacy'],
+              firstPublishedAt: new Date().toISOString(),
+              lastUpdatedAt: new Date().toISOString(),
+              sourceCount: 2,
+              sources: [
+                { name: 'MIT Technology Review', url: 'https://technologyreview.com', publishedAt: new Date().toISOString(), tier: 1 },
+              ],
+            },
+            {
+              id: 'story-3',
+              title: 'India Advances High-Precision Semiconductor Mission with Mega State Hubs',
+              summary: 'Federal and regional industrial corridors clear incentive packages for OSAT facilities and silicon fabrication units, reducing dependency on external chip supply chains.',
+              category: 'Career & Industry',
+              region: 'India',
+              importanceLabel: 'IMPORTANT',
+              importanceScore: 88,
+              finalRankScore: 90,
+              whyItMatters: 'Builds long-term sovereign hardware resilience and anchors engineering talent within domestic high-tech manufacturing ecosystems.',
+              estimatedReadTime: '3 min read',
+              relatedConcepts: ['Semiconductor Fabrication', 'OSAT Assembly', 'Supply Chain Sovereignty'],
+              firstPublishedAt: new Date().toISOString(),
+              lastUpdatedAt: new Date().toISOString(),
+              sourceCount: 2,
+              sources: [
+                { name: 'BusinessLine', url: 'https://thehindubusinessline.com', publishedAt: new Date().toISOString(), tier: 1 },
+              ],
+            },
+          ]);
+        }
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+
+    loadBriefs();
+  }, []);
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16">
+    <div className="space-y-8 animate-fadeIn">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
-            <Flame className="h-4 w-4 text-amber-400" />
-            <span>Curated Daily Briefing</span>
+      {/* 1. Daily Brief Editorial Header */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-cyan-50 via-white to-indigo-50 dark:from-cyan-950/70 dark:via-slate-900 dark:to-indigo-950/60 border border-cyan-200 dark:border-cyan-500/30 shadow-sm dark:shadow-glass">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{formattedDate} Edition</span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              AKIRA Daily Brief
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
+              What are the most important things you should understand today? Curated structural analysis behind the headlines.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">
-            Today's Global Intelligence Brief
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Curated, scored, and prioritized to cut through the noise.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
-          >
-            <RotateCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-
-          {/* Filter buttons */}
-          <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-white/10 self-start sm:self-auto">
-            {['ALL', 'BREAKING', 'IMPORTANT'].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setFilterLevel(lvl)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  filterLevel === lvl 
-                    ? 'bg-brand-600 text-white shadow-glow-purple' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 text-center self-start md:self-auto shrink-0 space-y-1 shadow-sm">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold block">Curated Focus</span>
+            <span className="text-xl font-extrabold text-cyan-700 dark:text-cyan-300">3 Key Stories</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">~12 min total reading</span>
           </div>
         </div>
       </div>
 
-      {/* Briefs list */}
-      {loading ? (
-        <div className="p-16 text-center space-y-3">
-          <RotateCw className="h-8 w-8 text-brand-400 animate-spin mx-auto" />
-          <p className="text-slate-400 text-sm">Synthesizing curated briefing...</p>
+      {/* 2. Today's Key Stories Grid */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Key Stories & What To Understand</h2>
+          </div>
+          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+            Curated for depth over noise
+          </span>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredBriefs.map((brief) => {
-            const importanceLabel = brief.importanceLabel || brief.importanceLevel || 'IMPORTANT';
-            const primarySource = brief.sources?.[0]?.name || brief.source || 'Live Wire';
-            const primaryUrl = brief.sources?.[0]?.url || brief.originalUrl || '#';
-            const pubDate = brief.lastUpdatedAt || brief.firstPublishedAt || brief.publishedAt;
 
-            return (
-              <div 
-                key={brief.id}
-                className="glass-panel glass-panel-hover p-6 rounded-2xl border border-white/10 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={
-                        (String(importanceLabel) === 'MUST_KNOW' || String(importanceLabel) === 'BREAKING')
-                          ? 'badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full' 
-                          : 'badge-important text-xs font-bold px-2.5 py-0.5 rounded-full'
-                      }>
-                        {importanceLabel} • {brief.importanceScore || 85}/100
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">{brief.category}</span>
-                    </div>
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {formatRelativeTime(pubDate)} • {brief.estimatedReadTime || '3 min read'}
-                    </span>
-                  </div>
+        {loading ? (
+          <LoadingState count={3} message="Compiling today's structural briefing..." />
+        ) : (
+          <div className="space-y-6">
+            {briefs.map((story) => (
+              <BriefCard key={story.id} story={story} />
+            ))}
+          </div>
+        )}
+      </div>
 
-                  <Link to={`/event/${brief.id}`}>
-                    <h2 className="text-lg sm:text-xl font-bold text-white hover:text-brand-300 transition-colors leading-snug">
-                      {brief.title}
-                    </h2>
-                  </Link>
+      {/* 3. Suggested Learning & Concept Synthesis Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        
+        {/* Core Concepts to Master Today */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-purple-500/20 shadow-sm dark:shadow-glass space-y-4">
+          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400 text-xs font-bold uppercase tracking-wider">
+            <GraduationCap className="w-4 h-4" />
+            <span>Suggested Learning Pathways</span>
+          </div>
 
-                  <p className="text-slate-300 text-sm mt-2.5 leading-relaxed">
-                    {brief.summary}
-                  </p>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Concepts Emerging in Today's News</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Understand the foundational principles driving today's geopolitical and technological developments:
+          </p>
 
-                  {/* Why it matters */}
-                  {brief.whyItMatters && (
-                    <div className="mt-3.5 p-3 rounded-xl bg-slate-900/80 border border-amber-500/20 text-xs text-slate-300 leading-relaxed">
-                      <strong className="text-amber-300 font-bold uppercase tracking-wider text-[11px] block mb-1">
-                        Why it matters:
-                      </strong>
-                      {brief.whyItMatters}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Actions */}
-                <div className="mt-5 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-slate-500">Related Concepts:</span>
-                    {brief.relatedConcepts?.slice(0, 3).map((c) => (
-                      <Link 
-                        key={c}
-                        to={`/learn?concept=${encodeURIComponent(c.toLowerCase().replace(/\s+/g, '-'))}`}
-                        className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600/30 border border-slate-700 transition-colors flex items-center gap-1"
-                      >
-                        <BookOpen className="h-3 w-3 text-brand-400" />
-                        <span>{c}</span>
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <a 
-                      href={primaryUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-400 hover:text-slate-200 flex items-center gap-1"
-                    >
-                      <span>{primarySource}</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-
-                    <Link
-                      to={`/event/${brief.id}`}
-                      className="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold flex items-center gap-1.5 transition-all shadow-glow-purple"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span>Explain & Quiz</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
+          <div className="space-y-2.5">
+            <Link
+              to="/learn?concept=monetary-policy"
+              className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-white/5 hover:border-purple-500/30 flex items-center justify-between group transition-all"
+            >
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">Monetary Policy & Interest Rates</h4>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Prerequisites: Inflation, Central Banking</span>
               </div>
-            );
-          })}
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+            </Link>
+
+            <Link
+              to="/learn?concept=ai-governance"
+              className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-white/5 hover:border-purple-500/30 flex items-center justify-between group transition-all"
+            >
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">AI Governance & Algorithmic Auditing</h4>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Prerequisites: Machine Learning, Data Privacy</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+            </Link>
+          </div>
         </div>
-      )}
+
+        {/* What To Understand / Executive Takeaway */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-cyan-500/20 shadow-sm dark:shadow-glass space-y-4">
+          <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400 text-xs font-bold uppercase tracking-wider">
+            <Lightbulb className="w-4 h-4" />
+            <span>What To Understand</span>
+          </div>
+
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">The Big Picture Synthesis</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Today's events signal two converging transitions: <strong>economic stabilization through calibrated monetary easing</strong> and <strong>increasing institutional regulation over foundational AI models</strong>.
+          </p>
+
+          <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-500/20 text-xs text-slate-800 dark:text-slate-200 space-y-2">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
+              <span>Capital costs are stabilizing, allowing strategic tech hardware investments to resume.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
+              <span>AI compliance is shifting from voluntary ethical pledges to binding legal classifications.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
 
     </div>
   );

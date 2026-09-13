@@ -112,6 +112,12 @@ export const EventDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
+    if (eventData.title) {
+      document.title = `${eventData.title} | AKIRA`;
+    }
+  }, [eventData.title]);
+
+  useEffect(() => {
     if (!id) return;
     setLoading(true);
     apiClient.get(`/articles/${id}`)
@@ -144,8 +150,8 @@ export const EventDetailPage: React.FC = () => {
   if (loading) {
     return (
       <div className="p-20 text-center space-y-4">
-        <RotateCw className="h-8 w-8 text-brand-400 animate-spin mx-auto" />
-        <p className="text-slate-400 text-sm">Generating AI comprehension breakdown & understanding quiz...</p>
+        <RotateCw className="h-8 w-8 text-brand-500 animate-spin mx-auto" />
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Generating AI comprehension breakdown & understanding quiz...</p>
       </div>
     );
   }
@@ -157,7 +163,7 @@ export const EventDetailPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <Link 
           to="/all-news"
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Live Stream</span>
@@ -168,11 +174,11 @@ export const EventDetailPage: React.FC = () => {
             onClick={() => setIsSaved(!isSaved)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
               isSaved 
-                ? 'bg-brand-600/20 border-brand-500 text-brand-300' 
-                : 'bg-slate-900 border-white/10 text-slate-300 hover:text-white'
+                ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-brand-600/20 dark:border-brand-500 dark:text-brand-300' 
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-brand-400 text-brand-400' : ''}`} />
+            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-brand-500 text-brand-500' : ''}`} />
             <span>{isSaved ? 'Saved to Library' : 'Save Event'}</span>
           </button>
         </div>
@@ -184,22 +190,22 @@ export const EventDetailPage: React.FC = () => {
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full">
             {((eventData as any).importanceLabel || eventData.importanceLevel || 'IMPORTANT').replace('_', ' ')} • Score {eventData.importanceScore}/100
           </span>
-          <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             {eventData.category}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {eventData.publishedAt}
           </span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white leading-tight">
           {eventData.title}
         </h1>
 
         {/* Source citation banner */}
-        <div className="p-3.5 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-slate-300 font-semibold">Reported by:</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">Reported by:</span>
             {((eventData as any).sources && (eventData as any).sources.length > 0) ? (
               (eventData as any).sources.map((src: any, i: number) => (
                 <a
@@ -207,14 +213,14 @@ export const EventDetailPage: React.FC = () => {
                   href={src.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 hover:text-white border border-slate-700/60 flex items-center gap-1 font-medium transition-colors"
+                  className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 flex items-center gap-1 font-medium transition-colors"
                 >
                   <span>{src.name}</span>
                   <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               ))
             ) : (
-              <span className="text-slate-200 font-medium">{eventData.source}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-medium">{eventData.source}</span>
             )}
           </div>
 
@@ -223,7 +229,7 @@ export const EventDetailPage: React.FC = () => {
               href={eventData.originalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-400 hover:text-brand-300 flex items-center gap-1 font-semibold"
+              className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 flex items-center gap-1 font-semibold"
             >
               <span>Original Wire</span>
               <ExternalLink className="h-3.5 w-3.5" />
@@ -233,21 +239,21 @@ export const EventDetailPage: React.FC = () => {
       </div>
 
       {/* FEATURE 3: "EXPLAIN THIS" Multi-Level AI Selector */}
-      <div className="glass-panel p-6 rounded-2xl border border-brand-500/30 shadow-glow-purple">
+      <div className="glass-panel p-6 rounded-2xl border border-brand-200 dark:border-brand-500/30 shadow-sm dark:shadow-glow-purple">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-brand-600/30 text-brand-300">
+            <div className="p-1.5 rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-600/30 dark:text-brand-300">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white">AI Explainer — Choose Your Comprehension Level</h2>
-              <p className="text-xs text-slate-400">Adaptive explanation tailored to your background knowledge.</p>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">AI Explainer — Choose Your Comprehension Level</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Adaptive explanation tailored to your background knowledge.</p>
             </div>
           </div>
         </div>
 
         {/* 5 Level Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-white/5 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-white/5 mb-4">
           {[
             { id: 'verySimple', label: '1. Very Simple' },
             { id: 'beginner', label: '2. Beginner' },
@@ -260,8 +266,8 @@ export const EventDetailPage: React.FC = () => {
               onClick={() => setExplainLevel(lvl.id as any)}
               className={`py-2 px-2 text-xs font-semibold rounded-lg transition-all text-center ${
                 explainLevel === lvl.id
-                  ? 'bg-brand-600 text-white shadow-glow-purple'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900'
               }`}
             >
               {lvl.label}
@@ -270,19 +276,19 @@ export const EventDetailPage: React.FC = () => {
         </div>
 
         {/* Explanation Text */}
-        <div className="p-4 rounded-xl bg-slate-900/90 border border-white/5 text-sm sm:text-base text-slate-200 leading-relaxed">
+        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed">
           {eventData.explanations[explainLevel]}
         </div>
       </div>
 
       {/* FEATURE 4: "TEACH ME" Prerequisite Learning Pathway */}
-      <div className="glass-panel p-6 rounded-2xl border border-white/10 space-y-4">
+      <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-white/10 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">Prerequisite Concepts to Master This Event</h2>
+            <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Prerequisite Concepts to Master This Event</h2>
           </div>
-          <span className="text-xs text-slate-400">Step-by-step learning loop</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Step-by-step learning loop</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -290,23 +296,23 @@ export const EventDetailPage: React.FC = () => {
             <Link 
               key={concept.id}
               to={`/learn?concept=${concept.id}`}
-              className="p-4 rounded-xl bg-slate-900/90 border border-white/5 hover:border-emerald-500/40 hover:bg-slate-800/80 transition-all group flex flex-col justify-between"
+              className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 hover:border-emerald-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group flex flex-col justify-between shadow-sm"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
                     Step {idx + 1}
                   </span>
-                  <BookOpen className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                  <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
                 </div>
-                <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
                   {concept.title}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                   {concept.desc}
                 </p>
               </div>
-              <div className="mt-3 text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+              <div className="mt-3 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 <span>Learn concept</span>
                 <span>→</span>
               </div>
@@ -317,53 +323,53 @@ export const EventDetailPage: React.FC = () => {
 
       {/* 7-PART STRUCTURED EVENT BREAKDOWN */}
       <div className="space-y-6">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Layers className="h-5 w-5 text-brand-400" />
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <Layers className="h-5 w-5 text-brand-600 dark:text-brand-400" />
           <span>Complete Event Breakdown</span>
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* 1. What Happened */}
-          <div className="glass-panel p-5 rounded-xl border border-white/10 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-300 flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-brand-400" />
+          <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400" />
               <span>1. What Happened?</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {eventData.breakdown.whatHappened}
             </p>
           </div>
 
           {/* 2. Why Did It Happen */}
-          <div className="glass-panel p-5 rounded-xl border border-white/10 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
-              <History className="h-4 w-4 text-blue-400" />
+          <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+              <History className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span>2. Why Did It Happen?</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {eventData.breakdown.whyDidItHappen}
             </p>
           </div>
 
           {/* 3. Why It Matters */}
-          <div className="glass-panel p-5 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-amber-400" />
+          <div className="glass-panel p-5 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/50 dark:bg-amber-500/5 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               <span>3. Why Does It Matter?</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
               {eventData.breakdown.whyDoesItMatter}
             </p>
           </div>
 
           {/* 4. Background */}
-          <div className="glass-panel p-5 rounded-xl border border-white/10 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
-              <Lightbulb className="h-4 w-4 text-teal-400" />
+          <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+              <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
               <span>4. Background Context</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {eventData.breakdown.background}
             </p>
           </div>
@@ -374,15 +380,15 @@ export const EventDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* Who is affected */}
-          <div className="glass-panel p-5 rounded-xl border border-white/10 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-indigo-400" />
+          <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               <span>5. Who Is Affected?</span>
             </h3>
             <ul className="space-y-2">
               {eventData.breakdown.whoIsAffected.map((item, idx) => (
-                <li key={idx} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 mt-2 shrink-0" />
+                <li key={idx} className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -390,15 +396,15 @@ export const EventDetailPage: React.FC = () => {
           </div>
 
           {/* What could happen next */}
-          <div className="glass-panel p-5 rounded-xl border border-white/10 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-rose-400" />
+          <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-rose-600 dark:text-rose-400" />
               <span>6. What Could Happen Next? (Projections)</span>
             </h3>
             <ul className="space-y-2">
               {eventData.breakdown.whatCouldHappenNext.map((item, idx) => (
-                <li key={idx} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400 mt-2 shrink-0" />
+                <li key={idx} className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mt-2 shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -409,19 +415,19 @@ export const EventDetailPage: React.FC = () => {
       </div>
 
       {/* FEATURE 5: AI UNDERSTANDING QUIZ */}
-      <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-brand-500/30 shadow-glass space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-white/10">
+      <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-brand-200 dark:border-brand-500/30 shadow-sm dark:shadow-glass space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-200 dark:border-white/10">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-400 mb-1">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-1">
               <HelpCircle className="h-4 w-4" />
               <span>Test Your Understanding</span>
             </div>
-            <h2 className="text-xl font-bold text-white">Event Comprehension Quiz (3 Questions)</h2>
-            <p className="text-xs text-slate-400">Questions test comprehension rather than simple memorization.</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Event Comprehension Quiz (3 Questions)</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Questions test comprehension rather than simple memorization.</p>
           </div>
 
           {showResults && (
-            <div className="px-4 py-2 rounded-xl bg-brand-600/20 border border-brand-500 text-brand-300 text-sm font-bold self-start sm:self-auto">
+            <div className="px-4 py-2 rounded-xl bg-brand-50 border border-brand-300 text-brand-800 dark:bg-brand-600/20 dark:border-brand-500 dark:text-brand-300 text-sm font-bold self-start sm:self-auto">
               Score: {calculateScore()} / {eventData.quiz.length} Correct
             </div>
           )}
@@ -433,12 +439,12 @@ export const EventDetailPage: React.FC = () => {
             const isCorrect = selectedAnswers[qIndex] === q.correctIndex;
 
             return (
-              <div key={q.id} className="p-5 rounded-xl bg-slate-900/90 border border-white/5 space-y-3">
+              <div key={q.id} className="p-5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 shadow-sm space-y-3">
                 <div className="flex items-start gap-2.5">
-                  <span className="h-6 w-6 rounded-full bg-brand-600/30 text-brand-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="h-6 w-6 rounded-full bg-brand-100 text-brand-800 dark:bg-brand-600/30 dark:text-brand-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                     {qIndex + 1}
                   </span>
-                  <p className="text-sm sm:text-base font-semibold text-slate-100 leading-snug">
+                  <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug">
                     {q.question}
                   </p>
                 </div>
@@ -447,18 +453,18 @@ export const EventDetailPage: React.FC = () => {
                 <div className="space-y-2 pt-2">
                   {q.options.map((opt, optIdx) => {
                     const isSelected = selectedAnswers[qIndex] === optIdx;
-                    let optionStyle = 'bg-slate-950/80 border-white/10 text-slate-300 hover:border-brand-500/50 hover:text-white';
+                    let optionStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-500/50 hover:bg-slate-100 dark:bg-slate-950/80 dark:border-white/10 dark:text-slate-300 dark:hover:text-white';
 
                     if (showResults) {
                       if (optIdx === q.correctIndex) {
-                        optionStyle = 'bg-emerald-500/15 border-emerald-500 text-emerald-200';
+                        optionStyle = 'bg-emerald-50 border-emerald-400 text-emerald-900 dark:bg-emerald-500/15 dark:border-emerald-500 dark:text-emerald-200 font-semibold';
                       } else if (isSelected) {
-                        optionStyle = 'bg-rose-500/15 border-rose-500 text-rose-200';
+                        optionStyle = 'bg-rose-50 border-rose-400 text-rose-900 dark:bg-rose-500/15 dark:border-rose-500 dark:text-rose-200';
                       } else {
-                        optionStyle = 'bg-slate-950/40 border-white/5 text-slate-500 opacity-60';
+                        optionStyle = 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/5 text-slate-400 opacity-60';
                       }
                     } else if (isSelected) {
-                      optionStyle = 'bg-brand-600/20 border-brand-500 text-white font-medium';
+                      optionStyle = 'bg-brand-50 border-brand-500 text-brand-900 dark:bg-brand-600/20 dark:border-brand-500 dark:text-white font-medium';
                     }
 
                     return (
@@ -470,10 +476,10 @@ export const EventDetailPage: React.FC = () => {
                       >
                         <span>{opt}</span>
                         {showResults && optIdx === q.correctIndex && (
-                          <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         )}
                         {showResults && isSelected && optIdx !== q.correctIndex && (
-                          <X className="h-4 w-4 text-rose-400 shrink-0" />
+                          <X className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
                         )}
                       </button>
                     );
@@ -484,8 +490,8 @@ export const EventDetailPage: React.FC = () => {
                 {showResults && (
                   <div className={`mt-3 p-3 rounded-xl text-xs leading-relaxed border ${
                     isCorrect 
-                      ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200' 
-                      : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-200' 
+                      : 'bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/40 dark:border-rose-500/30 dark:text-rose-200'
                   }`}>
                     <strong>Explanation: </strong> {q.explanation}
                   </div>
@@ -497,7 +503,7 @@ export const EventDetailPage: React.FC = () => {
 
         {/* Quiz Controls */}
         <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {Object.keys(selectedAnswers).length} of {eventData.quiz.length} answered
           </span>
 
@@ -505,7 +511,7 @@ export const EventDetailPage: React.FC = () => {
             <button
               onClick={() => setShowResults(true)}
               disabled={Object.keys(selectedAnswers).length === 0}
-              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-glow-purple transition-all"
+              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-md shadow-brand-500/25 transition-all"
             >
               Submit Quiz & Check Score
             </button>
@@ -515,7 +521,7 @@ export const EventDetailPage: React.FC = () => {
                 setShowResults(false);
                 setSelectedAnswers({});
               }}
-              className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-all"
+              className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold border border-slate-200 dark:border-slate-700 transition-all"
             >
               Retake Quiz
             </button>

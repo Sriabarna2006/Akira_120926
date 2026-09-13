@@ -1,24 +1,28 @@
-export type RegionType = 'Tamil Nadu' | 'India' | 'World';
+export type RegionType = 'Tamil Nadu' | 'India' | 'World' | 'ALL';
 export type ImportanceLabelType = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
 export type ImportanceLevel = 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING' | ImportanceLabelType;
 
 export type CategorySlug = 
-  | 'india' 
-  | 'world' 
+  | 'world'
+  | 'india'
+  | 'tamil-nadu'
   | 'ai-technology' 
   | 'economy-money' 
   | 'government-society' 
   | 'science-environment' 
   | 'cybersecurity' 
-  | 'career-industry';
+  | 'career-industry'
+  | 'space'
+  | 'health'
+  | 'education';
 
 export interface Category {
   id: string;
   name: string;
   slug: CategorySlug;
   description: string;
-  icon: string;
-  color: string;
+  icon?: string;
+  color?: string;
 }
 
 export interface CorroboratingSource {
@@ -26,6 +30,7 @@ export interface CorroboratingSource {
   url: string;
   publishedAt: string;
   tier: number;
+  credibility?: string;
 }
 
 export interface StructuredBreakdown {
@@ -50,12 +55,13 @@ export interface CanonicalEvent {
   id: string;
   title: string;
   summary: string;
-  region: RegionType;
+  region: 'Tamil Nadu' | 'India' | 'World';
   category: string;
   importanceLabel: ImportanceLabelType;
   importanceLevel?: string;
   importanceScore: number;
-  trendScore: number;
+  velocityScore?: number;
+  trendScore?: number;
   finalRankScore: number;
   whyItMatters: string;
   estimatedReadTime: string;
@@ -74,21 +80,29 @@ export interface CanonicalEvent {
   isSaved?: boolean;
 }
 
+export type MasteryStatus = 'NEEDS_LEARNING' | 'DEVELOPING' | 'STRONG';
+
+export interface Prerequisite {
+  id: string;
+  title: string;
+  description: string;
+  order?: number;
+}
+
 export interface Concept {
   id: string;
   title: string;
   slug: string;
-  category: Category;
+  category: string;
   shortDefinition: string;
-  fullExplanation: string;
-  prerequisites: {
-    id: string;
-    title: string;
-    description: string;
-    order: number;
-  }[];
-  multiLevelExplanations: MultiLevelExplanation;
-  userMasteryScore?: number;
+  fullExplanation?: string;
+  prerequisites: Prerequisite[];
+  keyTakeaways?: string[];
+  multiLevelExplanations?: MultiLevelExplanation;
+  masteryStatus?: MasteryStatus;
+  attemptsCount?: number;
+  correctCount?: number;
+  lastAttemptAt?: string;
 }
 
 export interface QuizQuestion {
@@ -99,24 +113,52 @@ export interface QuizQuestion {
   explanation: string;
 }
 
-export interface CategoryProgress {
-  category: string;
-  percentage: number;
-  articlesReadCount: number;
-  conceptsMasteredCount: number;
-  quizzesTakenCount: number;
-  averageQuizScore: number;
-  color: string;
+export interface ConceptChainStep {
+  step: number;
+  title: string;
+  type: 'EVENT' | 'CONCEPT' | 'MECHANISM' | 'REGULATION' | 'IMPACT';
+  description: string;
 }
 
-export interface UserKnowledgeProfile {
-  totalArticlesRead: number;
-  totalConceptsLearned: number;
-  totalQuizzesTaken: number;
-  overallMasteryPercentage: number;
-  categoryProgress: CategoryProgress[];
-  strongAreas: string[];
-  weakAreas: string[];
-  recentConcepts: Concept[];
-  recommendedTopics: string[];
+export interface UserConceptMastery {
+  conceptId: string;
+  conceptTitle: string;
+  category: string;
+  status: MasteryStatus;
+  attemptsCount: number;
+  correctCount: number;
+  lastAttemptAt: string;
+  confidenceScore: number;
+}
+
+export interface UserPreferences {
+  defaultRegion: RegionType;
+  preferredCategories: string[];
+  theme: 'dark' | 'system';
+  emailDigest: boolean;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: 'user' | 'admin';
+  avatarUrl?: string;
+  interests?: string[];
+  readingStreakDays?: number;
+  totalArticlesRead?: number;
+  totalConceptsLearned?: number;
+  savedEventsCount?: number;
+  preferences?: UserPreferences;
+  createdAt?: string;
+}
+
+export interface SavedItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  category: string;
+  region: string;
+  savedAt: string;
+  importanceLabel: ImportanceLabelType;
 }

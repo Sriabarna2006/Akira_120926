@@ -1,20 +1,22 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { AuthModal } from './components/auth/AuthModal';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { LiveTrendingPage } from './pages/LiveTrendingPage';
-import { AllNewsPage } from './pages/AllNewsPage';
 import { DailyBriefPage } from './pages/DailyBriefPage';
-import { EventDetailPage } from './pages/EventDetailPage';
+import { ExplorePage } from './pages/ExplorePage';
 import { LearnPage } from './pages/LearnPage';
 import { KnowledgePage } from './pages/KnowledgePage';
 import { LibraryPage } from './pages/LibraryPage';
-import { SearchPage } from './pages/SearchPage';
-import { CategoryPage } from './pages/CategoryPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { EventDetailPage } from './pages/EventDetailPage';
+import { AllNewsPage } from './pages/AllNewsPage';
+import { CategoryPage } from './pages/CategoryPage';
+import { SearchPage } from './pages/SearchPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,28 +30,36 @@ const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AuthModal />
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="live" element={<LiveTrendingPage />} />
-              <Route path="all-news" element={<AllNewsPage />} />
-              <Route path="daily-brief" element={<DailyBriefPage />} />
-              <Route path="explore" element={<AllNewsPage />} />
-              <Route path="event/:id" element={<EventDetailPage />} />
-              <Route path="learn" element={<LearnPage />} />
-              <Route path="knowledge" element={<KnowledgePage />} />
-              <Route path="library" element={<LibraryPage />} />
-              <Route path="search" element={<SearchPage />} />
-              <Route path="category/:slug" element={<CategoryPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AuthModal />
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                {/* 8 Primary Navigation Routes (Phase 2 Spec) */}
+                <Route index element={<Dashboard />} />
+                <Route path="dashboard" element={<Navigate to="/" replace />} />
+                <Route path="live" element={<LiveTrendingPage />} />
+                <Route path="daily-brief" element={<DailyBriefPage />} />
+                <Route path="explore" element={<ExplorePage />} />
+                <Route path="learn" element={<LearnPage />} />
+                <Route path="library" element={<LibraryPage />} />
+                <Route path="knowledge" element={<KnowledgePage />} />
+                <Route path="profile" element={<ProfilePage />} />
+
+                {/* Detail & Filter Routes */}
+                <Route path="event/:id" element={<EventDetailPage />} />
+                <Route path="category/:slug" element={<CategoryPage />} />
+                <Route path="search" element={<SearchPage />} />
+                <Route path="all-news" element={<AllNewsPage />} />
+
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

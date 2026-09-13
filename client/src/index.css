@@ -3,19 +3,34 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root, .dark {
     --bg-primary: #0B0F17;
     --bg-secondary: #111827;
     --bg-card: rgba(17, 24, 39, 0.75);
+    --bg-surface: #111827;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
     --border-subtle: rgba(255, 255, 255, 0.08);
     --border-hover: rgba(139, 92, 246, 0.35);
   }
 
+  html.light {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.95);
+    --bg-surface: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-hover: rgba(6, 182, 212, 0.45);
+  }
+
   body {
     background-color: var(--bg-primary);
-    color: #f1f5f9;
-    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -26,10 +41,10 @@
 
 /* Custom Glassmorphism & Card Utilities */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.65);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .glass-panel-hover {
@@ -37,9 +52,72 @@
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(139, 92, 246, 0.4);
+  border-color: var(--border-hover);
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px -10px rgba(139, 92, 246, 0.18);
+  box-shadow: 0 12px 30px -10px rgba(6, 182, 212, 0.18);
+}
+
+/* Bright Light Mode Overrides for Crisp Contrast */
+html.light .bg-\[\#0B0F17\] {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-\[\#0B0F17\]\/80,
+html.light .bg-\[\#0B0F17\]\/85,
+html.light .bg-\[\#0B0F17\]\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.light .bg-\[\#111827\]\/70,
+html.light .bg-\[\#111827\]\/80,
+html.light .bg-\[\#111827\] {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/40,
+html.light .bg-slate-950 {
+  background-color: #e2e8f0 !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.light .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.light .border-white\/10,
+html.light .border-white\/5,
+html.light .border-white\/15 {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+html.light .border-slate-700,
+html.light .border-slate-800 {
+  border-color: #cbd5e1 !important;
 }
 
 /* Gradient accents */
@@ -68,16 +146,24 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0F17;
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1F2937;
+  background: #334155;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #475569;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Importance Badges */
@@ -97,4 +183,22 @@
   background-color: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.35);
   color: #60A5FA;
+}
+
+html.light .badge-must-know {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+html.light .badge-important {
+  background-color: #fef3c7;
+  border-color: #fcd34d;
+  color: #b45309;
+}
+
+html.light .badge-interesting {
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
 }
