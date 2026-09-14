@@ -31,8 +31,8 @@ class AIExplainerService {
   public generateAnalysisForEvent(event: CanonicalEvent): GeneratedEventAnalysis {
     const title = event.title;
     const summary = event.summary;
-    const category = event.category;
-    const region = event.region;
+    const category = event.category || event.categoryId || 'General';
+    const region = event.region || event.regionId || 'World';
     const whyItMatters = event.whyItMatters;
 
     // 7-Part Breakdown
@@ -65,7 +65,7 @@ class AIExplainerService {
 
     // Concepts
     const concepts = (event.relatedConcepts && event.relatedConcepts.length > 0)
-      ? event.relatedConcepts.map(c => ({
+      ? event.relatedConcepts.map((c: string) => ({
           id: c.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           title: c,
           desc: `Core foundational mechanism essential for understanding developments in ${category}.`

@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS public.event_sources (
     snippet TEXT,
     published_at TIMESTAMPTZ NOT NULL,
     tier INT NOT NULL DEFAULT 2,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_event_sources_event_url UNIQUE (event_id, url)
 );
 
 -- ------------------------------------------------------------------------------
@@ -245,9 +246,15 @@ CREATE INDEX IF NOT EXISTS idx_canonical_events_urgency ON public.canonical_even
 CREATE INDEX IF NOT EXISTS idx_canonical_events_updated ON public.canonical_events(last_updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_event_sources_event_id ON public.event_sources(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_sources_source_id ON public.event_sources(source_id);
 CREATE INDEX IF NOT EXISTS idx_event_updates_event_id ON public.event_updates(event_id);
 CREATE INDEX IF NOT EXISTS idx_articles_event_id ON public.articles(event_id);
+CREATE INDEX IF NOT EXISTS idx_articles_source_id ON public.articles(source_id);
+CREATE INDEX IF NOT EXISTS idx_articles_region_id ON public.articles(region_id);
+CREATE INDEX IF NOT EXISTS idx_articles_category_id ON public.articles(category_id);
 CREATE INDEX IF NOT EXISTS idx_articles_published ON public.articles(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sources_region ON public.sources(region_id);
+CREATE INDEX IF NOT EXISTS idx_sources_category ON public.sources(category_id);
 
 CREATE INDEX IF NOT EXISTS idx_user_mastery_user ON public.user_concept_mastery(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_mastery_concept ON public.user_concept_mastery(concept_id);

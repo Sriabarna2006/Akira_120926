@@ -1,21 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
+import { ApiResponseHelper } from '../utils/response.js';
+import { logger } from '../utils/logger.js';
 
-export const errorHandler = (
+export function errorHandler(
   err: any,
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+): void {
+  const statusCode = err.statusCode || err.status || 500;
+  const code = err.code || (statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR');
+  
+  // Safe user-facing message
+  let message = err.message || 'An unexpected internal server error occurred.';
+  
+  // Suppress low-level SQL and database connection strings from leakage
+  if (message.includes('pg_') || message.includes('postgres://') || message.includes('postgresql://') || message.includes('neon.tech')) {
+    message = 'A database query error occurred.';
+  }
 
-  console.error(`[Error] ${req.method} ${req.url}:`, err);
+  logger.error(`[Unhandled Error] ${req.method} ${req.originalUrl || req.url}`, err);
 
-  res.status(statusCode).json({
-    success: false,
-    error: {
-      message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    }
-  });
-};
+  ApiResponseHelper.sendError(
+    res,
+    code,
+    message,
+    statusCode,
+    process.env.NODE_ENV === 'development' ? { path: req.path } : undefined
+  );
+}

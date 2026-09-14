@@ -51,6 +51,7 @@ INSERT INTO public.sources (id, name, url, feed_url, region_id, category_id, tie
 VALUES
     ('the-hindu', 'The Hindu', 'https://www.thehindu.com', 'https://www.thehindu.com/news/national/feeder/default.rss', 'india', 'politics', 1, 0.95, 'kasturi-sons', true),
     ('the-hindu-tn', 'The Hindu (Tamil Nadu)', 'https://www.thehindu.com/news/national/tamil-nadu/', 'https://www.thehindu.com/news/national/tamil-nadu/feeder/default.rss', 'tamil-nadu', 'politics', 1, 0.95, 'kasturi-sons', true),
+    ('the-hindu-chennai', 'The Hindu (Chennai)', 'https://www.thehindu.com/news/cities/chennai/', 'https://www.thehindu.com/news/cities/chennai/feeder/default.rss', 'tamil-nadu', 'infrastructure', 1, 0.95, 'kasturi-sons', true),
     ('toi', 'Times of India', 'https://timesofindia.indiatimes.com', 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', 'india', 'politics', 2, 0.85, 'times-group', true),
     ('bbc-world', 'BBC News', 'https://www.bbc.com/news', 'https://feeds.bbci.co.uk/news/world/rss.xml', 'world', 'politics', 1, 0.95, 'bbc', true),
     ('reuters-world', 'Reuters', 'https://www.reuters.com', 'https://www.reutersagency.com/feed/?best-topics=world', 'world', 'business', 1, 0.95, 'thomson-reuters', true),
@@ -58,6 +59,9 @@ VALUES
     ('dinamalar-tn', 'Dinamalar', 'https://www.dinamalar.com', 'https://rss.dinamalar.com/?cat=tamilnadu', 'tamil-nadu', 'politics', 2, 0.85, 'dinamalar-media', true),
     ('dinamani-tn', 'Dinamani', 'https://www.dinamani.com', 'https://www.dinamani.com/tamilnadu/rss', 'tamil-nadu', 'politics', 2, 0.85, 'express-group', true),
     ('techcrunch', 'TechCrunch', 'https://techcrunch.com', 'https://techcrunch.com/feed/', 'world', 'technology', 2, 0.85, 'yahoo', true),
+    ('the-verge', 'The Verge', 'https://www.theverge.com', 'https://www.theverge.com/rss/index.xml', 'world', 'technology', 2, 0.85, 'vox-media', true),
+    ('sciencedaily', 'ScienceDaily', 'https://www.sciencedaily.com', 'https://www.sciencedaily.com/rss/top/science.xml', 'world', 'science', 1, 0.95, 'sciencedaily', true),
+    ('bleepingcomputer', 'BleepingComputer', 'https://www.bleepingcomputer.com', 'https://www.bleepingcomputer.com/feed/', 'world', 'security', 1, 0.92, 'bleeping-computer', true),
     ('pib-india', 'Press Information Bureau (PIB)', 'https://pib.gov.in', 'https://pib.gov.in/rss/RssEnglish.aspx', 'india', 'politics', 1, 0.98, 'gov-india', true)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -65,3 +69,173 @@ ON CONFLICT (id) DO UPDATE SET
     feed_url = EXCLUDED.feed_url,
     tier = EXCLUDED.tier,
     credibility_score = EXCLUDED.credibility_score;
+
+-- ------------------------------------------------------------------------------
+-- 4. SEED SAMPLE DEVELOPMENT CANONICAL EVENTS (Clearly marked development data)
+-- ------------------------------------------------------------------------------
+INSERT INTO public.canonical_events (
+    id, title, summary, region_id, category_id, urgency_label, 
+    importance_score, velocity_score, final_rank_score, why_it_matters, 
+    first_published_at, last_updated_at, source_count, lifecycle_status, metadata
+)
+VALUES
+    (
+        'evt_tn_ev_hub_2026',
+        'Tamil Nadu Cabinet Clears Mega Infrastructure & Electric Mobility Corridor Policy',
+        'State government approves capital investment framework expanding metro transit links across Chennai and Hosur EV manufacturing hub.',
+        'tamil-nadu',
+        'infrastructure',
+        'IMPORTANT',
+        94, 90, 96,
+        'Accelerates high-speed regional transit corridors and strengthens clean mobility industrial employment in Tamil Nadu.',
+        NOW() - INTERVAL '4 hours',
+        NOW() - INTERVAL '1 hour',
+        2,
+        'OFFICIAL_CONFIRMATION',
+        '{"is_dev_sample": true, "environment": "development"}'::jsonb
+    ),
+    (
+        'evt_macro_rates_2026',
+        'Reserve Bank of India & Global Central Banks Shift Monetary Policy Stance',
+        'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
+        'india',
+        'economy',
+        'IMPORTANT',
+        92, 88, 94,
+        'Directly shapes retail borrowing costs, investment decisions, and capital market valuations across sectors.',
+        NOW() - INTERVAL '6 hours',
+        NOW() - INTERVAL '2 hours',
+        2,
+        'OFFICIAL_CONFIRMATION',
+        '{"is_dev_sample": true, "environment": "development"}'::jsonb
+    ),
+    (
+        'evt_ai_semiconductor_2026',
+        'Next-Generation Semiconductor Consortium Announces Global Fab Initiative',
+        'Leading chipmakers and research universities unveil sub-2nm architectural standard for high-throughput AI accelerator silicon.',
+        'world',
+        'technology',
+        'IMPORTANT',
+        88, 82, 90,
+        'Defines standard architectures for data center AI workloads and next-generation sovereign computing infrastructure.',
+        NOW() - INTERVAL '8 hours',
+        NOW() - INTERVAL '3 hours',
+        2,
+        'NEW_DEVELOPMENT',
+        '{"is_dev_sample": true, "environment": "development"}'::jsonb
+    )
+ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    summary = EXCLUDED.summary,
+    region_id = EXCLUDED.region_id,
+    category_id = EXCLUDED.category_id,
+    why_it_matters = EXCLUDED.why_it_matters,
+    final_rank_score = EXCLUDED.final_rank_score;
+
+-- ------------------------------------------------------------------------------
+-- 5. SEED SAMPLE DEVELOPMENT EVENT SOURCES
+-- ------------------------------------------------------------------------------
+INSERT INTO public.event_sources (id, event_id, source_id, source_name, title, url, snippet, published_at, tier)
+VALUES
+    (
+        'a0000000-0000-0000-0000-000000000001',
+        'evt_tn_ev_hub_2026',
+        'the-hindu-tn',
+        'The Hindu (Tamil Nadu)',
+        'TN Cabinet gives nod to industrial corridor expansion and EV battery parks',
+        'https://www.thehindu.com/news/national/tamil-nadu/ev-corridor-policy-2026',
+        'The State Cabinet on Monday approved a dedicated infrastructure fund to boost EV manufacturing clusters in Hosur and Coimbatore.',
+        NOW() - INTERVAL '4 hours',
+        1
+    ),
+    (
+        'a0000000-0000-0000-0000-000000000002',
+        'evt_tn_ev_hub_2026',
+        'toi',
+        'Times of India',
+        'Tamil Nadu launches multi-modal transit links for industrial hubs',
+        'https://timesofindia.indiatimes.com/city/chennai/tn-transit-ev-policy-2026',
+        'New rail and expressway linkages cleared to integrate industrial corridors across the state.',
+        NOW() - INTERVAL '3 hours',
+        2
+    ),
+    (
+        'a0000000-0000-0000-0000-000000000003',
+        'evt_macro_rates_2026',
+        'economic-times',
+        'The Economic Times',
+        'RBI signals calibrated transition in monetary liquidity policy',
+        'https://economictimes.indiatimes.com/news/economy/policy/rbi-monetary-policy-2026',
+        'Central bank outlines steady glidepath for headline inflation while maintaining financial stability.',
+        NOW() - INTERVAL '6 hours',
+        1
+    ),
+    (
+        'a0000000-0000-0000-0000-000000000004',
+        'evt_ai_semiconductor_2026',
+        'techcrunch',
+        'TechCrunch',
+        'Semiconductor giants form new alliance for sub-2nm AI accelerator hardware',
+        'https://techcrunch.com/2026/09/12/sub-2nm-ai-hardware-consortium',
+        'Consortium aims to standardize ultra-low latency optical interconnects for next-generation neural processors.',
+        NOW() - INTERVAL '8 hours',
+        2
+    )
+ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    snippet = EXCLUDED.snippet;
+
+-- ------------------------------------------------------------------------------
+-- 6. SEED SAMPLE DEVELOPMENT ARTICLES
+-- ------------------------------------------------------------------------------
+INSERT INTO public.articles (
+    id, source_id, event_id, title, url, content_snippet, published_at, region_id, category_id
+)
+VALUES
+    (
+        'art_tn_ev_hindu_01',
+        'the-hindu-tn',
+        'evt_tn_ev_hub_2026',
+        'TN Cabinet gives nod to industrial corridor expansion and EV battery parks',
+        'https://www.thehindu.com/news/national/tamil-nadu/ev-corridor-policy-2026',
+        'The State Cabinet on Monday approved a dedicated infrastructure fund to boost EV manufacturing clusters in Hosur and Coimbatore.',
+        NOW() - INTERVAL '4 hours',
+        'tamil-nadu',
+        'infrastructure'
+    ),
+    (
+        'art_tn_ev_toi_01',
+        'toi',
+        'evt_tn_ev_hub_2026',
+        'Tamil Nadu launches multi-modal transit links for industrial hubs',
+        'https://timesofindia.indiatimes.com/city/chennai/tn-transit-ev-policy-2026',
+        'New rail and expressway linkages cleared to integrate industrial corridors across the state.',
+        NOW() - INTERVAL '3 hours',
+        'tamil-nadu',
+        'infrastructure'
+    ),
+    (
+        'art_macro_et_01',
+        'economic-times',
+        'evt_macro_rates_2026',
+        'RBI signals calibrated transition in monetary liquidity policy',
+        'https://economictimes.indiatimes.com/news/economy/policy/rbi-monetary-policy-2026',
+        'Central bank outlines steady glidepath for headline inflation while maintaining financial stability.',
+        NOW() - INTERVAL '6 hours',
+        'india',
+        'economy'
+    ),
+    (
+        'art_ai_tc_01',
+        'techcrunch',
+        'evt_ai_semiconductor_2026',
+        'Semiconductor giants form new alliance for sub-2nm AI accelerator hardware',
+        'https://techcrunch.com/2026/09/12/sub-2nm-ai-hardware-consortium',
+        'Consortium aims to standardize ultra-low latency optical interconnects for next-generation neural processors.',
+        NOW() - INTERVAL '8 hours',
+        'world',
+        'technology'
+    )
+ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    content_snippet = EXCLUDED.content_snippet;

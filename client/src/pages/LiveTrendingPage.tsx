@@ -4,7 +4,8 @@ import {
   RotateCw, 
   Globe, 
   Flag, 
-  Landmark 
+  Landmark,
+  Clock
 } from 'lucide-react';
 import { eventService } from '../services/eventService';
 import { CanonicalEvent, RegionType } from '../types';
@@ -23,6 +24,7 @@ export const LiveTrendingPage: React.FC = () => {
   const [savedEventIds, setSavedEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString());
 
   const regionTabs: TabItem<RegionType>[] = [
     { id: 'ALL', label: 'All Regions' },
@@ -33,113 +35,55 @@ export const LiveTrendingPage: React.FC = () => {
 
   const urgencyFilters = [
     { id: 'ALL', label: 'All Statuses' },
-    { id: 'BREAKING', label: '🔴 Breaking' },
-    { id: 'TRENDING', label: '🔥 Trending' },
-    { id: 'IMPORTANT', label: '🚨 Important' },
+    { id: 'BREAKING', label: 'Breaking' },
+    { id: 'TRENDING', label: 'Trending' },
+    { id: 'IMPORTANT', label: 'Important' },
   ];
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
+      const regionParam = selectedRegion === 'ALL' ? undefined : (selectedRegion === 'Tamil Nadu' ? 'tamil-nadu' : selectedRegion.toLowerCase());
+      const urgencyParam = selectedUrgency === 'ALL' ? undefined : selectedUrgency;
+
       const [eventsRes, savedRes] = await Promise.allSettled([
-        eventService.getTopEvents(selectedRegion),
-        eventService.getSavedEvents(),
+        eventService.getLiveEvents({
+          region: regionParam,
+          urgency: urgencyParam,
+        }),
+        user ? eventService.getSavedEvents() : Promise.resolve([]),
       ]);
 
-      if (eventsRes.status === 'fulfilled' && eventsRes.value.length > 0) {
-        setEvents(eventsRes.value);
+      if (eventsRes.status === 'fulfilled' && eventsRes.value.data.length > 0) {
+        // Map database events to client CanonicalEvent shape
+        const mapped: CanonicalEvent[] = eventsRes.value.data.map((e: any) => ({
+          ...e,
+          region: e.regionId === 'tamil-nadu' ? 'Tamil Nadu' : e.regionId === 'india' ? 'India' : 'World',
+          category: e.categoryId || 'General',
+          importanceLabel: e.urgencyLabel || 'IMPORTANT',
+          firstPublishedAt: e.firstPublishedAt || new Date().toISOString(),
+          lastUpdatedAt: e.lastUpdatedAt || new Date().toISOString(),
+          sourceCount: e.sources?.length || e.sourceCount || 1,
+          estimatedReadTime: '3 min read',
+          sources: (e.sources || []).map((s: any) => ({
+            name: s.sourceName || s.name || 'Wire Source',
+            url: s.url || '#',
+            publishedAt: s.publishedAt || new Date().toISOString(),
+            tier: s.tier || 2,
+          })),
+        }));
+        setEvents(mapped);
       } else {
-        // Fallback UI shell dataset for Phase 2 frontend foundation
-        setEvents([
-          {
-            id: 'evt_tn_ev_hub_2026',
-            title: 'Tamil Nadu Cabinet Clears Mega Infrastructure & Electric Mobility Corridor Policy',
-            summary: 'State government approves capital investment framework expanding metro transit links across Chennai and Hosur EV manufacturing hub.',
-            region: 'Tamil Nadu',
-            category: 'Government & Society',
-            importanceLabel: 'BREAKING',
-            importanceScore: 94,
-            velocityScore: 90,
-            finalRankScore: 96,
-            whyItMatters: 'Accelerates high-speed regional transit corridors and strengthens clean mobility industrial employment in Tamil Nadu.',
-            estimatedReadTime: '3 min read',
-            relatedConcepts: ['EV Infrastructure', 'Transit Corridors', 'Industrial Policy'],
-            firstPublishedAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-            lastUpdatedAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-            sourceCount: 2,
-            sources: [
-              { name: 'The Hindu (Tamil Nadu)', url: 'https://thehindu.com', publishedAt: new Date().toISOString(), tier: 1 },
-              { name: 'Times of India', url: 'https://timesofindia.indiatimes.com', publishedAt: new Date().toISOString(), tier: 1 },
-            ],
-          },
-          {
-            id: 'evt_macro_rates_2026',
-            title: 'Reserve Bank of India & Global Central Banks Shift Monetary Policy Stance',
-            summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
-            region: 'India',
-            category: 'Economy & Money',
-            importanceLabel: 'IMPORTANT',
-            importanceScore: 92,
-            velocityScore: 88,
-            finalRankScore: 94,
-            whyItMatters: 'Directly shapes retail borrowing costs, investment decisions, and capital market valuations across sectors.',
-            estimatedReadTime: '3 min read',
-            relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy'],
-            firstPublishedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-            lastUpdatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-            sourceCount: 4,
-            sources: [
-              { name: 'Financial Times', url: 'https://ft.com', publishedAt: new Date().toISOString(), tier: 1 },
-              { name: 'Reuters', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 },
-            ],
-          },
-          {
-            id: 'evt_ai_act_2026',
-            title: 'EU Enforces Comprehensive AI Act: What High-Risk AI Classification Means for Tech',
-            summary: 'Landmark AI framework enters legal enforcement requiring strict audits for biometric and generative foundational models.',
-            region: 'World',
-            category: 'AI & Technology',
-            importanceLabel: 'TRENDING',
-            importanceScore: 89,
-            velocityScore: 85,
-            finalRankScore: 91,
-            whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.',
-            estimatedReadTime: '4 min read',
-            relatedConcepts: ['AI Governance', 'Algorithmic Auditing'],
-            firstPublishedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-            lastUpdatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-            sourceCount: 3,
-            sources: [
-              { name: 'MIT Technology Review', url: 'https://technologyreview.com', publishedAt: new Date().toISOString(), tier: 1 },
-              { name: 'BBC Tech', url: 'https://bbc.com', publishedAt: new Date().toISOString(), tier: 1 },
-            ],
-          },
-          {
-            id: 'evt_cyber_cloud_2026',
-            title: 'Critical Zero-Day Vulnerability Discovered in Cloud Identity Infrastructure',
-            summary: 'Security researchers unveil token forging vulnerability allowing cross-tenant privilege escalation.',
-            region: 'World',
-            category: 'Cybersecurity',
-            importanceLabel: 'IMPORTANT',
-            importanceScore: 86,
-            velocityScore: 78,
-            finalRankScore: 88,
-            whyItMatters: 'Requires immediate enterprise patching to prevent unauthorized session hijacking across cloud deployments.',
-            estimatedReadTime: '2 min read',
-            relatedConcepts: ['OAuth / JWT Tokens', 'Zero-Day Exploits'],
-            firstPublishedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-            lastUpdatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-            sourceCount: 2,
-            sources: [
-              { name: 'Wired Security', url: 'https://wired.com', publishedAt: new Date().toISOString(), tier: 1 },
-            ],
-          },
-        ]);
+        setEvents([]);
       }
 
       if (savedRes.status === 'fulfilled') {
         setSavedEventIds(savedRes.value);
       }
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.warn('Failed to load events:', err);
+      setEvents([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -148,7 +92,7 @@ export const LiveTrendingPage: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, [selectedRegion]);
+  }, [selectedRegion, selectedUrgency]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -170,28 +114,23 @@ export const LiveTrendingPage: React.FC = () => {
     }
   };
 
-  // Filter events by urgency and region
-  const filteredEvents = events.filter((evt) => {
-    const matchesRegion = selectedRegion === 'ALL' || evt.region === selectedRegion;
-    const matchesUrgency = selectedUrgency === 'ALL' || evt.importanceLabel === selectedUrgency;
-    return matchesRegion && matchesUrgency;
-  });
-
   return (
     <div className="space-y-8 animate-fadeIn">
-      
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/10">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">
-            <Radio className="w-4 h-4 animate-pulse text-rose-500 dark:text-rose-400" />
-            <span>Real-Time Intelligence Stream</span>
+            <Radio className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+            <span>Persisted Intelligence Stream</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Live & Trending Top 10
+            Canonical Events & Intelligence Stream
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            What is happening right now — ranked canonical events corroborated across multi-tier sources.
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2">
+            <span>Ranked canonical events corroborated across multi-tier sources.</span>
+            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <Clock className="w-3 h-3" /> Updated: {lastUpdated}
+            </span>
           </p>
         </div>
 
@@ -203,7 +142,7 @@ export const LiveTrendingPage: React.FC = () => {
             size="sm"
             leftIcon={<RotateCw className="w-3.5 h-3.5" />}
           >
-            Refresh Stream
+            Refresh Data
           </Button>
         </div>
       </div>
@@ -239,10 +178,10 @@ export const LiveTrendingPage: React.FC = () => {
 
       {/* Content Area */}
       {loading ? (
-        <LoadingState count={4} message="Ranking and corroborating incoming live events..." />
-      ) : filteredEvents.length > 0 ? (
+        <LoadingState count={4} message="Fetching verified events from database..." />
+      ) : events.length > 0 ? (
         <div className="space-y-4">
-          {filteredEvents.map((evt, idx) => (
+          {events.map((evt, idx) => (
             <EventCard
               key={evt.id || idx}
               event={evt}
@@ -264,7 +203,6 @@ export const LiveTrendingPage: React.FC = () => {
           }}
         />
       )}
-
     </div>
   );
 };

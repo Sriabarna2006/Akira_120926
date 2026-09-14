@@ -5,457 +5,306 @@ import {
   Search, 
   Clock, 
   ExternalLink, 
-  Sparkles, 
   ArrowRight, 
-  BookOpen, 
-  TrendingUp,
   Layers,
-  AlertCircle
+  ChevronLeft,
+  ChevronRight,
+  Filter
 } from 'lucide-react';
-import { apiClient } from '../services/api';
-import { CanonicalEvent } from '../types';
+import { eventService } from '../services/eventService';
+import { regionService } from '../services/regionService';
+import { categoryService } from '../services/categoryService';
+import { CanonicalEvent, RegionItem, Category } from '../types';
 
 export const AllNewsPage: React.FC = () => {
-  const [articles, setArticles] = useState<CanonicalEvent[]>([]);
+  const [events, setEvents] = useState<CanonicalEvent[]>([]);
+  const [regions, setRegions] = useState<RegionItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<string>(new Date().toISOString());
+  const [totalEvents, setTotalEvents] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   // Filters
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedImportance, setSelectedImportance] = useState<string>('ALL');
+  const [selectedUrgency, setSelectedUrgency] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const fetchLiveNews = async () => {
+  useEffect(() => {
+    async function loadMetadata() {
+      try {
+        const [regs, cats] = await Promise.all([
+          regionService.getRegions(),
+          categoryService.getCategories(),
+        ]);
+        setRegions(regs);
+        setCategories(cats);
+      } catch (err) {
+        console.warn('Metadata load notice:', err);
+      }
+    }
+    loadMetadata();
+  }, []);
+
+  const fetchEvents = async (page = 1) => {
     try {
       setLoading(true);
       setErrorMsg(null);
-      // Try /live first, with fallback
-      let res;
-      try {
-        res = await apiClient.get('/live');
-      } catch {
-        res = await apiClient.get('/news/live');
-      }
 
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setArticles(res.data.data);
-        setLastSyncTime(res.data.meta?.lastSyncTime || new Date().toISOString());
-      } else if (Array.isArray(res.data)) {
-        setArticles(res.data);
-        setLastSyncTime(new Date().toISOString());
-      }
+      const regionParam = selectedRegion === 'ALL' ? undefined : (selectedRegion === 'Tamil Nadu' ? 'tamil-nadu' : selectedRegion.toLowerCase());
+      const categoryParam = selectedCategory === 'ALL' ? undefined : selectedCategory.toLowerCase();
+      const urgencyParam = selectedUrgency === 'ALL' ? undefined : selectedUrgency;
+
+      const res = await eventService.getEvents({
+        region: regionParam,
+        category: categoryParam,
+        urgency: urgencyParam,
+        search: searchQuery || undefined,
+        page,
+        limit: 10,
+      });
+
+      const mapped: CanonicalEvent[] = res.data.map((e: any) => ({
+        ...e,
+        region: e.regionId === 'tamil-nadu' ? 'Tamil Nadu' : e.regionId === 'india' ? 'India' : 'World',
+        category: e.categoryId || 'General',
+        importanceLabel: e.urgencyLabel || 'IMPORTANT',
+        firstPublishedAt: e.firstPublishedAt || new Date().toISOString(),
+        lastUpdatedAt: e.lastUpdatedAt || new Date().toISOString(),
+        sourceCount: e.sources?.length || e.sourceCount || 1,
+        estimatedReadTime: '3 min read',
+        sources: (e.sources || []).map((s: any) => ({
+          name: s.sourceName || s.name || 'Wire Source',
+          url: s.url || '#',
+          publishedAt: s.publishedAt || new Date().toISOString(),
+          tier: s.tier || 2,
+        })),
+      }));
+
+      setEvents(mapped);
+      setTotalEvents(res.total);
+      setCurrentPage(res.page);
+      setTotalPages(res.totalPages);
     } catch (err: any) {
-      console.error('Failed to load live news:', err);
-      setErrorMsg('Could not connect to live news stream. Please ensure the backend API server is running.');
+      console.error('Failed to load events:', err);
+      setErrorMsg('Could not connect to database event feed. Please ensure the backend API server is running.');
+      setEvents([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualSync = async () => {
-    try {
-      setSyncing(true);
-      setSyncMessage('Connecting to Tamil Nadu, India & global wire feeds...');
-      let res;
-      try {
-        res = await apiClient.post('/live/sync');
-      } catch {
-        res = await apiClient.post('/news/sync');
-      }
+  useEffect(() => {
+    fetchEvents(1);
+  }, [selectedRegion, selectedCategory, selectedUrgency]);
 
-      if (res.data?.success) {
-        const newCount = res.data.data?.newCount ?? 0;
-        const total = res.data.data?.totalEvents ?? articles.length;
-        setSyncMessage(`✓ Synced! Added ${newCount} updates. Total events: ${total}`);
-        await fetchLiveNews();
-        setTimeout(() => setSyncMessage(null), 4000);
-      } else {
-        setSyncMessage('Sync finished.');
-        await fetchLiveNews();
-        setTimeout(() => setSyncMessage(null), 3000);
-      }
-    } catch (err: any) {
-      console.error('Sync error:', err);
-      setSyncMessage('Sync failed. Please check server connection.');
-      setTimeout(() => setSyncMessage(null), 3500);
-    } finally {
-      setSyncing(false);
-    }
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchEvents(1);
   };
 
-  useEffect(() => {
-    fetchLiveNews();
-
-    // Auto refresh every 60 seconds
-    const interval = setInterval(() => {
-      fetchLiveNews();
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const regions = [
-    { id: 'ALL', label: 'All Regions' },
-    { id: 'Tamil Nadu', label: '🇮🇳 Tamil Nadu' },
-    { id: 'India', label: '🇮🇳 India' },
-    { id: 'World', label: '🌍 World' },
-  ];
-
-  const categories = [
-    { id: 'ALL', label: 'All Categories' },
-    { id: 'AI & Technology', label: 'AI & Tech' },
-    { id: 'Economy & Money', label: 'Economy' },
-    { id: 'Cybersecurity', label: 'Cybersecurity' },
-    { id: 'Science & Environment', label: 'Science' },
-    { id: 'Government & Society', label: 'Government' },
-    { id: 'India', label: 'India' },
-    { id: 'World', label: 'World' },
-  ];
-
-  // Client-side instant multi-criteria filtering
-  const filteredArticles = articles.filter((art) => {
-    const artRegion = art.region || '';
-    const matchesRegion = 
-      selectedRegion === 'ALL' || 
-      artRegion.toLowerCase().includes(selectedRegion.toLowerCase());
-
-    const artCategory = art.category || '';
-    const matchesCategory = 
-      selectedCategory === 'ALL' || 
-      artCategory.toLowerCase().includes(selectedCategory.toLowerCase());
-
-    const artLabel = (art.importanceLabel || art.importanceLevel || '').toUpperCase();
-    const matchesImportance = 
-      selectedImportance === 'ALL' || 
-      artLabel === selectedImportance.toUpperCase() ||
-      (selectedImportance === 'MUST_KNOW' && (artLabel === 'BREAKING' || art.importanceScore >= 85));
-
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = 
-      !q || 
-      (art.title && art.title.toLowerCase().includes(q)) || 
-      (art.summary && art.summary.toLowerCase().includes(q)) ||
-      (art.sources && art.sources.some(s => s.name.toLowerCase().includes(q))) ||
-      (art.source && art.source.toLowerCase().includes(q)) ||
-      (art.relatedConcepts && art.relatedConcepts.some(c => c.toLowerCase().includes(q)));
-
-    return matchesRegion && matchesCategory && matchesImportance && matchesSearch;
-  });
-
   const formatRelativeTime = (isoString?: string) => {
-    if (!isoString) return 'Just now';
+    if (!isoString) return 'Recently';
     try {
-      const parsedTime = new Date(isoString).getTime();
-      if (isNaN(parsedTime)) return 'Recently';
-      const diffMs = Date.now() - parsedTime;
+      const diffMs = Date.now() - new Date(isoString).getTime();
       const diffMins = Math.floor(diffMs / 60000);
       if (diffMins < 1) return 'Just now';
       if (diffMins < 60) return `${diffMins}m ago`;
       const diffHours = Math.floor(diffMins / 60);
       if (diffHours < 24) return `${diffHours}h ago`;
-      const diffDays = Math.floor(diffHours / 24);
-      return `${diffDays}d ago`;
+      return `${Math.floor(diffHours / 24)}d ago`;
     } catch {
       return 'Recently';
     }
   };
 
-  const getBadgeStyle = (label?: string) => {
-    const normalized = (label || 'IMPORTANT').toUpperCase();
-    if (normalized === 'BREAKING' || normalized === 'MUST_KNOW') {
-      return 'badge-must-know text-[10px] font-bold px-2.5 py-0.5 rounded-full';
-    }
-    if (normalized === 'TRENDING') {
-      return 'badge-important text-[10px] font-bold px-2.5 py-0.5 rounded-full';
-    }
-    return 'badge-interesting text-[10px] font-bold px-2.5 py-0.5 rounded-full';
-  };
-
   return (
     <div className="space-y-6 animate-fadeIn pb-16">
-      
-      {/* 1. Header & Live Controller Bar */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-brand-50 via-white to-slate-50 dark:from-brand-950/90 dark:via-slate-900 dark:to-slate-900 border border-brand-200 dark:border-brand-500/20 shadow-sm dark:shadow-glass">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      {/* Header */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-white/10 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Live Multi-Source News & Intelligence Stream
-              </span>
-              <span className="text-xs text-slate-400">•</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {articles.length} verified real-world events ingested
-              </span>
+            <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">
+              <Layers className="w-4 h-4" />
+              <span>Core Intelligence Database</span>
             </div>
-
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              All News & Real-Time Intelligence Stream
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+              All Canonical Events & Articles
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-2xl">
-              Continuously aggregated from Reuters, BBC, The Hindu, Economic Times, TechCrunch, and CNBC. Every article is classified, scored, and linked to prerequisite concept learning paths.
+            <p className="text-sm text-slate-300 mt-2 max-w-xl">
+              Filter through verified events, regional state streams, and cross-corroborated publisher archives.
             </p>
           </div>
 
-          {/* Sync action button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            {syncMessage && (
-              <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 dark:text-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30 px-3 py-1.5 rounded-lg animate-fadeIn">
-                {syncMessage}
-              </span>
-            )}
-            
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleManualSync}
-              disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 disabled:opacity-50 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+              onClick={() => fetchEvents(currentPage)}
+              disabled={loading}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all"
             >
-              <RotateCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Ingesting Latest Feeds...' : 'Fetch Latest News'}</span>
+              <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* 2. Error Banner if server disconnected */}
-      {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-500/30 flex items-center justify-between text-xs text-rose-800 dark:text-rose-300">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-          <button
-            onClick={fetchLiveNews}
-            className="px-3 py-1 rounded bg-rose-100 hover:bg-rose-200 dark:bg-rose-600/30 dark:hover:bg-rose-600/50 text-rose-900 dark:text-rose-100 font-semibold transition-colors"
-          >
-            Retry Connection
-          </button>
-        </div>
-      )}
-
-      {/* 3. Search & Filters Bar */}
-      <div className="space-y-3">
-        
-        {/* Search Bar + Importance filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        {/* Search form */}
+        <form onSubmit={handleSearchSubmit} className="mt-6 flex items-center gap-2 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by keyword (e.g. inflation, cybersecurity, Tamil Nadu, AI, RBI)..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all shadow-sm"
+              placeholder="Search by keyword, policy name, or headline..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-400 transition-colors"
             />
           </div>
-
-          {/* Importance Filter */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-white/10 self-stretch sm:self-auto shrink-0">
-            {['ALL', 'BREAKING', 'TRENDING', 'IMPORTANT'].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setSelectedImportance(lvl)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  selectedImportance === lvl 
-                    ? 'bg-brand-600 text-white shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Region & Category Pills */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-          
-          {/* Region Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-white/10 self-start">
-            {regions.map((reg) => (
-              <button
-                key={reg.id}
-                onClick={() => setSelectedRegion(reg.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  selectedRegion === reg.id
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                {reg.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Category Pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  selectedCategory === cat.id
-                    ? 'bg-slate-900 text-white dark:bg-slate-200 dark:text-slate-900 font-bold shadow-sm'
-                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:border-white/5'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-        </div>
-
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold transition-colors"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
-      {/* 4. Feed Status & Results Count */}
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-        <span>Showing <strong>{filteredArticles.length}</strong> of <strong>{articles.length}</strong> live articles</span>
-        <span>Last synced: {formatRelativeTime(lastSyncTime)}</span>
+      {/* Filter Toolbar */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-white/10 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold">
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filters:</span>
+          </div>
+
+          {/* Region selector */}
+          <select
+            value={selectedRegion}
+            onChange={(e) => setSelectedRegion(e.target.value)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+          >
+            <option value="ALL">All Regions</option>
+            {regions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Category selector */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Urgency selector */}
+          <select
+            value={selectedUrgency}
+            onChange={(e) => setSelectedUrgency(e.target.value)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="BREAKING">Breaking</option>
+            <option value="TRENDING">Trending</option>
+            <option value="IMPORTANT">Important</option>
+          </select>
+        </div>
+
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          Showing <span className="font-bold text-slate-900 dark:text-white">{events.length}</span> of {totalEvents} events
+        </div>
       </div>
 
-      {/* 5. Main Articles List */}
+      {/* Events List */}
       {loading ? (
         <div className="p-16 text-center space-y-3">
-          <RotateCw className="h-8 w-8 text-brand-500 animate-spin mx-auto" />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Aggregating live multi-source news feeds...</p>
+          <RotateCw className="w-8 h-8 text-cyan-500 animate-spin mx-auto" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading events from PostgreSQL database...</p>
         </div>
-      ) : filteredArticles.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl glass-panel border border-slate-200 dark:border-white/10 space-y-3">
-          <p className="text-slate-700 dark:text-slate-300 font-semibold">No articles match your current search or filters.</p>
-          <button
-            onClick={() => {
-              setSelectedRegion('ALL');
-              setSelectedCategory('ALL');
-              setSelectedImportance('ALL');
-              setSearchQuery('');
-            }}
-            className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold"
-          >
-            Clear all filters
-          </button>
+      ) : errorMsg ? (
+        <div className="p-8 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 text-center space-y-2">
+          <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">{errorMsg}</p>
+        </div>
+      ) : events.length === 0 ? (
+        <div className="p-12 rounded-2xl bg-white dark:bg-[#111827]/60 border border-slate-200 dark:border-white/10 text-center space-y-3">
+          <Layers className="w-10 h-10 text-slate-400 mx-auto" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">No events found matching your criteria</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Try adjusting your filters or search query.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredArticles.map((article) => {
-            const importanceLabel = article.importanceLabel || article.importanceLevel || 'IMPORTANT';
-            const primarySource = article.sources?.[0]?.name || article.source || 'Live Wire';
-            const primaryUrl = article.sources?.[0]?.url || article.originalUrl || '#';
-            const pubDate = article.lastUpdatedAt || article.firstPublishedAt || article.publishedAt || new Date().toISOString();
+          {events.map((event) => {
+            const primarySource = event.sources?.[0]?.name || 'Wire Source';
+            const primaryUrl = event.sources?.[0]?.url || '#';
+            const pubDate = event.lastUpdatedAt || event.firstPublishedAt;
 
             return (
               <div
-                key={article.id}
-                className="glass-panel glass-panel-hover p-6 rounded-2xl border border-slate-200 dark:border-white/10 flex flex-col justify-between space-y-4 shadow-sm"
+                key={event.id}
+                className="p-6 rounded-2xl bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-white/10 hover:border-cyan-500/30 transition-all space-y-3 shadow-sm"
               >
                 <div>
-                  {/* Header row */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={getBadgeStyle(importanceLabel)}>
-                        {importanceLabel} • {article.importanceScore || 80}/100
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 border border-slate-200 dark:border-white/5">
+                        {event.importanceLabel} • Rank {event.finalRankScore || 80}/100
                       </span>
-                      
-                      {article.region && (
-                        <span className="text-xs text-purple-700 bg-purple-50 border border-purple-200 dark:text-purple-300 dark:bg-purple-500/10 dark:border-purple-500/20 font-medium px-2 py-0.5 rounded-md">
-                          {article.region}
-                        </span>
-                      )}
-
-                      <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20 font-medium px-2 py-0.5 rounded-md">
-                        {article.category}
-                      </span>
-
-                      {article.sourceCount && article.sourceCount > 1 && (
-                        <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-500/15 dark:border-amber-500/30 font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <Layers className="h-3 w-3" />
-                          {article.sourceCount} sources verified
-                        </span>
-                      )}
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{event.region}</span>
+                      <span className="text-slate-300 dark:text-slate-700">•</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{event.category}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatRelativeTime(pubDate)}
-                      </span>
-                      <span>•</span>
-                      <span>{article.estimatedReadTime || '3 min read'}</span>
+                    <div className="flex items-center gap-1 text-xs text-slate-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{formatRelativeTime(pubDate)}</span>
                     </div>
                   </div>
 
-                  {/* Headline */}
-                  <Link to={`/event/${article.id}`}>
-                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-300 transition-colors leading-snug">
-                      {article.title}
-                    </h2>
-                  </Link>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
+                    <Link to={`/events/${event.id}`}>{event.title}</Link>
+                  </h3>
 
-                  {/* Summary */}
-                  <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm mt-2.5 leading-relaxed">
-                    {article.summary}
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                    {event.summary}
                   </p>
-
-                  {article.whyItMatters && (
-                    <div className="mt-3.5 p-3 rounded-xl bg-amber-50 dark:bg-slate-900/90 border border-amber-200 dark:border-amber-500/20 text-xs text-slate-800 dark:text-slate-300 leading-relaxed flex items-start gap-2.5">
-                      <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider text-[10px] block">
-                          Why It Matters
-                        </strong>
-                        <span className="mt-0.5 block">{article.whyItMatters}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Bottom Actions & Concept Links */}
-                <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  
-                  {/* Related concepts */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Prerequisites:</span>
-                    {article.relatedConcepts?.slice(0, 3).map((c) => (
-                      <Link
-                        key={c}
-                        to={`/learn?concept=${encodeURIComponent(c.toLowerCase().replace(/\s+/g, '-'))}`}
-                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 transition-colors flex items-center gap-1"
-                      >
-                        <BookOpen className="h-3 w-3 text-brand-600 dark:text-brand-400" />
-                        <span>{c}</span>
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Source & Action button */}
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-white/5 text-xs">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <span>Source:</span>
                     <a
                       href={primaryUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1"
+                      className="font-semibold text-slate-700 dark:text-slate-300 hover:text-cyan-500 inline-flex items-center gap-1"
                     >
                       <span>{primarySource}</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
-
-                    <Link
-                      to={`/event/${article.id}`}
-                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-brand-500/20 transition-all hover:scale-105 active:scale-95"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span>Explain & Quiz</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
+                    {event.sources && event.sources.length > 1 && (
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">
+                        +{event.sources.length - 1} corroborating
+                      </span>
+                    )}
                   </div>
 
+                  <Link
+                    to={`/events/${event.id}`}
+                    className="inline-flex items-center gap-1 text-cyan-600 dark:text-cyan-400 hover:underline font-semibold"
+                  >
+                    <span>Read Full Breakdown</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </div>
             );
@@ -463,6 +312,28 @@ export const AllNewsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-4">
+          <button
+            onClick={() => fetchEvents(currentPage - 1)}
+            disabled={currentPage <= 1 || loading}
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+          </button>
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => fetchEvents(currentPage + 1)}
+            disabled={currentPage >= totalPages || loading}
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <ChevronRight className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

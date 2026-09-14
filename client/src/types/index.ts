@@ -2,27 +2,51 @@ export type RegionType = 'Tamil Nadu' | 'India' | 'World' | 'ALL';
 export type ImportanceLabelType = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
 export type ImportanceLevel = 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING' | ImportanceLabelType;
 
-export type CategorySlug = 
-  | 'world'
-  | 'india'
-  | 'tamil-nadu'
-  | 'ai-technology' 
-  | 'economy-money' 
-  | 'government-society' 
-  | 'science-environment' 
-  | 'cybersecurity' 
-  | 'career-industry'
-  | 'space'
-  | 'health'
-  | 'education';
+export type CategorySlug = string;
+
+export interface RegionItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  tier: number;
+  isActive: boolean;
+  createdAt?: string;
+}
 
 export interface Category {
   id: string;
   name: string;
-  slug: CategorySlug;
-  description: string;
+  slug: string;
+  description?: string;
   icon?: string;
   color?: string;
+  isActive?: boolean;
+}
+
+export interface SourceItem {
+  id: string;
+  name: string;
+  url: string;
+  feedUrl?: string;
+  regionId?: string;
+  categoryId?: string;
+  tier: number;
+  credibilityScore: number;
+  isActive: boolean;
+}
+
+export interface ArticleItem {
+  id: string;
+  sourceId?: string;
+  sourceName?: string;
+  eventId?: string;
+  title: string;
+  url: string;
+  contentSnippet?: string;
+  publishedAt: string;
+  regionId?: string;
+  categoryId?: string;
 }
 
 export interface CorroboratingSource {

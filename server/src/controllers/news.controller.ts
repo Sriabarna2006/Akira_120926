@@ -5,7 +5,7 @@ import { aiExplainerService } from '../services/aiExplainer.service.js';
 export const getTop10LiveEvents = async (req: Request, res: Response) => {
   try {
     const { region } = req.query;
-    const top10 = newsIngestionService.getTop10LiveEvents(region as string);
+    const top10 = await newsIngestionService.getTop10LiveEvents(region as string);
 
     res.json({
       success: true,
@@ -25,7 +25,7 @@ export const getLiveEventsStream = async (req: Request, res: Response) => {
   try {
     const { region, category, label, search, limit } = req.query;
 
-    const result = newsIngestionService.getAllEvents({
+    const result = await newsIngestionService.getAllEvents({
       region: region as string,
       category: category as string,
       label: label as string,
@@ -62,7 +62,7 @@ export const syncLiveNews = async (req: Request, res: Response) => {
 
 export const getDailyBrief = async (req: Request, res: Response) => {
   try {
-    const top10 = newsIngestionService.getTop10LiveEvents();
+    const top10 = await newsIngestionService.getTop10LiveEvents();
     // Curate top 6 high-impact events for the Daily Brief
     const curatedBrief = top10.slice(0, 6);
 
@@ -83,13 +83,13 @@ export const getDailyBrief = async (req: Request, res: Response) => {
 export const getEventById = async (req: Request, res: Response) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const event = newsIngestionService.getEventById(id);
+    const event = await newsIngestionService.getEventById(id);
 
     if (!event) {
       return res.status(404).json({ success: false, error: 'Event not found' });
     }
 
-    const fullAnalysis = aiExplainerService.generateAnalysisForEvent(event);
+    const fullAnalysis = aiExplainerService.generateAnalysisForEvent(event as any);
 
     res.json({
       success: true,
@@ -105,3 +105,4 @@ export const getEventById = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: error.message || 'Failed to retrieve event details' });
   }
 };
+

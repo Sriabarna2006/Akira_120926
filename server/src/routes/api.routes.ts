@@ -1,55 +1,58 @@
 import { Router } from 'express';
-import { 
-  getTop10LiveEvents, 
-  getLiveEventsStream, 
-  syncLiveNews, 
-  getDailyBrief, 
-  getEventById 
-} from '../controllers/news.controller.js';
-import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
-import { authenticateUser, requireInternalSecret } from '../middleware/auth.middleware.js';
+import regionRoutes from './region.routes.js';
+import categoryRoutes from './category.routes.js';
+import sourceRoutes from './source.routes.js';
+import articleRoutes from './article.routes.js';
+import eventRoutes from './event.routes.js';
+import liveRoutes from './live.routes.js';
 import authRoutes from './auth.routes.js';
+import { authenticateUser, requireInternalSecret } from '../middleware/auth.middleware.js';
 import { AuthController } from '../controllers/auth.controller.js';
+import { getDailyBrief } from '../controllers/news.controller.js';
+import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
+import { EventController } from '../controllers/event.controller.js';
+import { LiveController } from '../controllers/live.controller.js';
 
 const router = Router();
 
 // Apply optional user authentication across all API routes
 router.use(authenticateUser);
 
-// Health checks
+// 🩺 HEALTH CHECKS
 router.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'AKIRA Real-World Intelligence & Learning Assistant API',
+    version: 'Phase 3 (Core Data Layer & Backend Foundation)',
     timestamp: new Date().toISOString(),
   });
 });
 router.get('/health/db', AuthController.checkDbHealth);
 router.post('/health/db/migrate', AuthController.migrateNeon);
 
+// 🌐 CORE REFERENCE & INTELLIGENCE DOMAIN ROUTES
+router.use('/regions', regionRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/sources', sourceRoutes);
+router.use('/articles', articleRoutes);
+router.use('/events', eventRoutes);
+router.use('/live', liveRoutes);
+
 // 🔐 AUTH & USER-PRIVATE ROUTES
 router.use('/auth', authRoutes);
 
-// 🔴 LIVE & TRENDING Endpoints (Canonical & Aliases)
-router.get('/live', getLiveEventsStream);
-router.get('/news/live', getLiveEventsStream);
-router.get('/news', getLiveEventsStream);
+// 🔄 BACKWARDS COMPATIBILITY ALIASES
+router.get('/news/live', LiveController.getLiveStream);
+router.get('/news', LiveController.getLiveStream);
+router.get('/news/top', LiveController.getTop);
+router.get('/news/live/top', LiveController.getTop);
+router.post('/news/sync', requireInternalSecret, LiveController.sync);
+router.post('/news/live/sync', requireInternalSecret, LiveController.sync);
+router.get('/news/:id', EventController.getById);
 
-router.get('/live/top', getTop10LiveEvents);
-router.get('/news/top', getTop10LiveEvents);
-router.get('/news/live/top', getTop10LiveEvents);
-
-// 🔒 SECURED Ingestion Sync Endpoints (Internal Secret or Admin required)
-router.post('/live/sync', requireInternalSecret, syncLiveNews);
-router.post('/news/sync', requireInternalSecret, syncLiveNews);
-router.post('/news/live/sync', requireInternalSecret, syncLiveNews);
-
-// ☀️ DAILY BRIEF & EVENT BREAKDOWNS
+// ☀️ DAILY BRIEF
 router.get('/daily-brief', getDailyBrief);
 router.get('/news/daily-brief', getDailyBrief);
-router.get('/events/:id', getEventById);
-router.get('/articles/:id', getEventById); // alias for backwards compatibility
-router.get('/news/:id', getEventById);
 
 // 🎓 CONCEPTS & LEARNING LOOP
 router.get('/concepts', getConcepts);

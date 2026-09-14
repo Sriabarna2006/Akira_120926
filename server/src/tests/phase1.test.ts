@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 import http from 'http';
 import { loadMigrations } from '../db/migrate.js';
 import { checkDatabaseConnection } from '../db/supabase.js';
@@ -218,6 +219,8 @@ async function runPhase1VerificationSuite(): Promise<void> {
 
   if (!allPassed) {
     process.exit(1);
+  } else {
+    process.exit(0);
   }
 }
 

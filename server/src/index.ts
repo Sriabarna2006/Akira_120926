@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { ingestionScheduler } from './services/ingestion/scheduler.js';
 
 dotenv.config();
 
@@ -37,8 +38,12 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     console.log(`📡 URL: http://localhost:${PORT}`);
     console.log(`🌐 Allowed Origin: ${CORS_ORIGIN}`);
     console.log(`=========================================`);
+
+    // Initialize background news ingestion scheduler
+    ingestionScheduler.start();
   });
 }
 
 export default app;
+
 

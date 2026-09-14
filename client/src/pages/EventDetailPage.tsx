@@ -139,7 +139,7 @@ export const EventDetailPage: React.FC = () => {
 
   const calculateScore = () => {
     let score = 0;
-    eventData.quiz.forEach((q, idx) => {
+    (eventData.quiz || []).forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correctIndex) {
         score += 1;
       }
