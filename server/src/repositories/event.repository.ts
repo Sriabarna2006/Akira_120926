@@ -1,6 +1,8 @@
-import { CanonicalEvent, EventSource, Article } from '../types/index.js';
+import { CanonicalEvent, EventSource, Article, TrendObservation, RankingMetadata, UrgencyLabel } from '../types/index.js';
 import { query, queryOne } from '../db/dbClient.js';
 import { supabaseAdmin, isSupabaseConfigured } from '../db/supabase.js';
+
+let inMemoryObservations: TrendObservation[] = [];
 
 // Safe development reference canonical events
 const DEFAULT_EVENTS: CanonicalEvent[] = [
@@ -596,5 +598,130 @@ export class EventRepository {
       localEvent.lastUpdatedAt = now;
     }
   }
+
+  static async updateScores(
+    eventId: string,
+    scores: {
+      urgencyLabel?: UrgencyLabel;
+      importanceScore?: number;
+      velocityScore?: number;
+      finalRankScore?: number;
+      trendScore?: number;
+    },
+    metadata?: RankingMetadata
+  ): Promise<void> {
+    try {
+      const sql = `
+        UPDATE public.canonical_events
+        SET 
+          urgency_label = COALESCE($1, urgency_label),
+          importance_score = COALESCE($2, importance_score),
+          velocity_score = COALESCE($3, velocity_score),
+          final_rank_score = COALESCE($4, final_rank_score),
+          metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{ranking}',
+            $5::jsonb,
+            true
+          )
+        WHERE id = $6;
+      `;
+      await query(sql, [
+        scores.urgencyLabel || null,
+        scores.importanceScore ?? null,
+        scores.velocityScore ?? null,
+        scores.finalRankScore ?? null,
+        JSON.stringify(metadata || {}),
+        eventId,
+      ]);
+    } catch (err) {
+      console.warn('[EventRepository] DB updateScores error:', (err as Error).message);
+    }
+
+    const local = inMemoryEvents.find((e) => e.id === eventId);
+    if (local) {
+      if (scores.urgencyLabel) local.urgencyLabel = scores.urgencyLabel;
+      if (scores.importanceScore !== undefined) local.importanceScore = scores.importanceScore;
+      if (scores.velocityScore !== undefined) local.velocityScore = scores.velocityScore;
+      if (scores.finalRankScore !== undefined) local.finalRankScore = scores.finalRankScore;
+      if (scores.trendScore !== undefined) local.trendScore = scores.trendScore;
+      if (metadata) {
+        local.rankingMetadata = metadata;
+        local.metadata = { ...(local.metadata || {}), ranking: metadata };
+      }
+    }
+  }
+
+  static async recordTrendObservation(observation: TrendObservation): Promise<void> {
+    const obs: TrendObservation = {
+      ...observation,
+      id: observation.id || `obs_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      observedAt: observation.observedAt || new Date().toISOString(),
+    };
+
+    try {
+      const sql = `
+        INSERT INTO public.trend_observations (
+          event_id, observed_at, article_count, independent_source_count,
+          trend_score, importance_score, velocity_score, coverage_score,
+          recency_score, freshness_score, spread_score, final_rank_score
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+      `;
+      await query(sql, [
+        obs.eventId,
+        obs.observedAt,
+        obs.articleCount,
+        obs.independentSourceCount,
+        obs.trendScore,
+        obs.importanceScore,
+        obs.velocityScore,
+        obs.coverageScore,
+        obs.recencyScore,
+        obs.freshnessScore,
+        obs.spreadScore,
+        obs.finalRankScore,
+      ]);
+    } catch (err) {
+      console.warn('[EventRepository] DB recordTrendObservation notice:', (err as Error).message);
+    }
+
+    inMemoryObservations.unshift(obs);
+    // Keep bounded in memory (last 200)
+    if (inMemoryObservations.length > 200) {
+      inMemoryObservations = inMemoryObservations.slice(0, 200);
+    }
+  }
+
+  static async getRecentObservations(eventId: string, hours = 24): Promise<TrendObservation[]> {
+    const cutoffTime = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+
+    try {
+      const sql = `
+        SELECT 
+          id, event_id AS "eventId", observed_at AS "observedAt",
+          article_count AS "articleCount", independent_source_count AS "independentSourceCount",
+          trend_score AS "trendScore", importance_score AS "importanceScore",
+          velocity_score AS "velocityScore", coverage_score AS "coverageScore",
+          recency_score AS "recencyScore", freshness_score AS "freshnessScore",
+          spread_score AS "spreadScore", final_rank_score AS "finalRankScore"
+        FROM public.trend_observations
+        WHERE event_id = $1 AND observed_at >= $2
+        ORDER BY observed_at DESC;
+      `;
+      const rows = await query<TrendObservation>(sql, [eventId, cutoffTime]);
+      if (rows && rows.length > 0) {
+        return rows;
+      }
+    } catch (err) {
+      console.warn('[EventRepository] DB getRecentObservations error:', (err as Error).message);
+    }
+
+    const cutoffMs = Date.now() - hours * 3600 * 1000;
+    return inMemoryObservations.filter(
+      (o) => o.eventId === eventId && new Date(o.observedAt).getTime() >= cutoffMs
+    );
+  }
 }
+
 

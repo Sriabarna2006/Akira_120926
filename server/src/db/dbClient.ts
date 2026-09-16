@@ -19,6 +19,139 @@ if (isNeonConfigured && DATABASE_URL) {
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000,
     });
+
+    // Auto-create Phase 5 & Phase 6 tables if not present
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS public.trend_observations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+        observed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        article_count INT NOT NULL DEFAULT 1,
+        independent_source_count INT NOT NULL DEFAULT 1,
+        trend_score INT NOT NULL,
+        importance_score INT NOT NULL,
+        velocity_score INT NOT NULL,
+        coverage_score INT NOT NULL,
+        recency_score INT NOT NULL,
+        freshness_score INT NOT NULL,
+        spread_score INT NOT NULL,
+        final_rank_score INT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS public.event_ai_summaries (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+        version INT NOT NULL DEFAULT 1,
+        provider VARCHAR(50) NOT NULL DEFAULT 'deterministic',
+        model VARCHAR(100) NOT NULL DEFAULT 'akira-core-v1',
+        five_w_one_h JSONB NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'COMPLETED',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_event_ai_summaries_event_version UNIQUE (event_id, version)
+      );
+
+      CREATE TABLE IF NOT EXISTS public.event_explanations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+        level VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        provider VARCHAR(50) NOT NULL DEFAULT 'deterministic',
+        model VARCHAR(100) NOT NULL DEFAULT 'akira-core-v1',
+        version INT NOT NULL DEFAULT 1,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_event_explanations_event_level_version UNIQUE (event_id, level, version)
+      );
+
+      CREATE TABLE IF NOT EXISTS public.event_quizzes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+        version INT NOT NULL DEFAULT 1,
+        questions JSONB NOT NULL,
+        provider VARCHAR(50) NOT NULL DEFAULT 'deterministic',
+        model VARCHAR(100) NOT NULL DEFAULT 'akira-core-v1',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_event_quizzes_event_version UNIQUE (event_id, version)
+      );
+
+      CREATE TABLE IF NOT EXISTS public.concept_prerequisites (
+        concept_id VARCHAR(100) NOT NULL REFERENCES public.concepts(id) ON DELETE CASCADE,
+        prerequisite_concept_id VARCHAR(100) NOT NULL REFERENCES public.concepts(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (concept_id, prerequisite_concept_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_learning_progress (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        concept_id VARCHAR(100),
+        event_id VARCHAR(100),
+        mastery_score INT NOT NULL DEFAULT 0,
+        mastery_status VARCHAR(30) NOT NULL DEFAULT 'NEEDS_LEARNING',
+        attempt_count INT NOT NULL DEFAULT 0,
+        correct_count INT NOT NULL DEFAULT 0,
+        incorrect_count INT NOT NULL DEFAULT 0,
+        last_attempt_at TIMESTAMPTZ,
+        last_mastered_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_review_schedules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        concept_id VARCHAR(100),
+        event_id VARCHAR(100),
+        ease_factor FLOAT NOT NULL DEFAULT 2.5,
+        interval_days INT NOT NULL DEFAULT 1,
+        repetition_count INT NOT NULL DEFAULT 0,
+        last_reviewed_at TIMESTAMPTZ,
+        next_review_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status VARCHAR(30) NOT NULL DEFAULT 'NEW',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_quiz_attempts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        event_id VARCHAR(100) NOT NULL,
+        concept_id VARCHAR(100),
+        score INT NOT NULL,
+        total_questions INT NOT NULL,
+        accuracy FLOAT NOT NULL,
+        score_percentage INT NOT NULL,
+        mastery_status VARCHAR(30) NOT NULL,
+        answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+        submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_learning_activities (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        activity_type VARCHAR(50) NOT NULL,
+        event_id VARCHAR(100),
+        concept_id VARCHAR(100),
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      INSERT INTO public.canonical_events (
+        id, title, summary, region_id, category_id, urgency_label,
+        importance_score, velocity_score, final_rank_score, why_it_matters,
+        first_published_at, last_updated_at, source_count, lifecycle_status, created_at
+      ) VALUES (
+        'evt_tn_ev_hub_2026',
+        'Tamil Nadu Cabinet Clears Mega Infrastructure & Electric Mobility Corridor Policy',
+        'State government approves capital investment framework expanding metro transit links across Chennai and Hosur EV manufacturing hub.',
+        'tamil-nadu', 'infrastructure', 'IMPORTANT', 94, 90, 96,
+        'Accelerates high-speed regional transit corridors and strengthens clean mobility industrial employment in Tamil Nadu.',
+        NOW() - INTERVAL '4 hours', NOW() - INTERVAL '1 hour', 2, 'OFFICIAL_CONFIRMATION', NOW() - INTERVAL '4 hours'
+      ) ON CONFLICT (id) DO NOTHING;
+    `).catch((err) => {
+      console.warn('[DB] Phase 6 & Phase 7 tables initialization notice:', err.message);
+    });
   } catch (err) {
     console.warn('[DB] Failed to initialize PostgreSQL pool:', (err as Error).message);
   }
@@ -48,6 +181,10 @@ export async function query<T = any>(text: string, params: any[] = []): Promise<
 export async function queryOne<T = any>(text: string, params: any[] = []): Promise<T | null> {
   const rows = await query<T>(text, params);
   return rows.length > 0 ? rows[0] : null;
+}
+
+export function isDatabaseConnected(): boolean {
+  return pool !== null;
 }
 
 export { pool };

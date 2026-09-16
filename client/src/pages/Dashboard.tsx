@@ -8,13 +8,20 @@ import {
   Bookmark, 
   BarChart3, 
   Compass, 
-  BookOpen, 
-  ChevronRight
+  ChevronRight,
+  Flame,
+  RotateCw,
+  Globe,
+  Flag,
+  Landmark,
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
+
 import { useAuth } from '../context/AuthContext';
 import { eventService } from '../services/eventService';
 import { learningService } from '../services/learningService';
-import { CanonicalEvent, ConceptChainStep, UserConceptMastery } from '../types';
+import { CanonicalEvent, ConceptChainStep, UserConceptMastery, RegionType } from '../types';
 import { EventCard } from '../components/cards/EventCard';
 import { BriefCard } from '../components/cards/BriefCard';
 import { Button } from '../components/ui/Button';
@@ -30,6 +37,9 @@ export const Dashboard: React.FC = () => {
   const [userMastery, setUserMastery] = useState<UserConceptMastery[]>([]);
   const [savedEventIds, setSavedEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRegion, setSelectedRegion] = useState<RegionType>('ALL');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
   // Time-aware greeting
   const greeting = (() => {
@@ -51,121 +61,98 @@ export const Dashboard: React.FC = () => {
     { step: 6, title: 'Economic Impact', type: 'IMPACT', description: 'Real GDP, mortgage EMIs & investment flows' },
   ];
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadDashboardData = async (region: RegionType = selectedRegion) => {
+    setLoading(true);
+    try {
+      const regionParam = region === 'ALL' ? undefined : (region === 'Tamil Nadu' ? 'tamil-nadu' : region.toLowerCase());
+      const [liveRes, briefRes, masteryRes, savedRes] = await Promise.allSettled([
+        eventService.getTopEvents({ region: regionParam, limit: 5 }),
+        eventService.getDailyBrief(),
+        learningService.getUserMastery(),
+        eventService.getSavedEvents(),
+      ]);
 
-    async function loadDashboardData() {
-      setLoading(true);
-      try {
-        const [liveRes, briefRes, masteryRes, savedRes] = await Promise.allSettled([
-          eventService.getTopEvents('ALL'),
-          eventService.getDailyBrief(),
-          learningService.getUserMastery(),
-          eventService.getSavedEvents(),
+      if (liveRes.status === 'fulfilled' && liveRes.value.length > 0) {
+        setTopEvents(liveRes.value);
+      } else {
+        // High quality fallback
+        setTopEvents([
+          {
+            id: 'evt_macro_rates_2026',
+            title: 'Reserve Bank & Global Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
+            summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
+            region: 'India',
+            category: 'Economy & Money',
+            importanceLabel: 'BREAKING',
+            importanceScore: 92,
+            finalRankScore: 95,
+            whyItMatters: 'Directly impacts home loan EMIs, business borrowing costs, currency exchange rates, and consumer purchasing power.',
+            estimatedReadTime: '3 min read',
+            relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy', 'Central Banking'],
+            firstPublishedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+            lastUpdatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+            sourceCount: 3,
+            sources: [{ name: 'Financial Times / Reuters', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 }],
+          },
+          {
+            id: 'evt_tn_semiconductor_2026',
+            title: 'Tamil Nadu Announces ₹12,000 Cr Semiconductor Packaging & Assembly Hub',
+            summary: 'State cabinet clears mega incentive policy to establish high-precision testing, OSAT, and chip design centers.',
+            region: 'Tamil Nadu',
+            category: 'AI & Technology',
+            importanceLabel: 'BREAKING',
+            importanceScore: 89,
+            finalRankScore: 92,
+            whyItMatters: 'Accelerates regional industrial transformation and creates thousands of high-tech engineering opportunities.',
+            estimatedReadTime: '3 min read',
+            relatedConcepts: ['Semiconductors', 'Industrial Policy', 'Supply Chains'],
+            firstPublishedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+            lastUpdatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+            sourceCount: 2,
+            sources: [{ name: 'The Hindu', url: 'https://thehindu.com', publishedAt: new Date().toISOString(), tier: 1 }],
+          },
         ]);
-
-        if (!isMounted) return;
-
-        if (liveRes.status === 'fulfilled' && liveRes.value.length > 0) {
-          setTopEvents(liveRes.value.slice(0, 3));
-        } else {
-          // Clean structured UI shell placeholders ready for backend connection
-          setTopEvents([
-            {
-              id: 'evt_macro_rates_2026',
-              title: 'Reserve Bank & Global Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
-              summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
-              region: 'India',
-              category: 'Economy & Money',
-              importanceLabel: 'BREAKING',
-              importanceScore: 92,
-              finalRankScore: 95,
-              whyItMatters: 'Directly impacts home loan EMIs, business borrowing costs, currency exchange rates, and consumer purchasing power.',
-              estimatedReadTime: '3 min read',
-              relatedConcepts: ['Inflation', 'Interest Rates', 'Monetary Policy', 'Central Banking'],
-              firstPublishedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-              lastUpdatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-              sourceCount: 3,
-              sources: [{ name: 'Financial Times / Reuters', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 }],
-            },
-            {
-              id: 'evt_ai_act_2026',
-              title: 'EU Enforces Comprehensive AI Act: What High-Risk AI Classification Means for Tech',
-              summary: 'Landmark AI framework enters legal enforcement requiring strict audits for biometric and generative foundational models.',
-              region: 'World',
-              category: 'AI & Technology',
-              importanceLabel: 'TRENDING',
-              importanceScore: 89,
-              finalRankScore: 91,
-              whyItMatters: 'Sets the first legally binding global standard for generative AI compliance, data privacy, and algorithm transparency.',
-              estimatedReadTime: '4 min read',
-              relatedConcepts: ['AI Governance', 'Algorithmic Auditing'],
-              firstPublishedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-              lastUpdatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-              sourceCount: 2,
-              sources: [{ name: 'MIT Technology Review', url: 'https://technologyreview.com', publishedAt: new Date().toISOString(), tier: 1 }],
-            },
-            {
-              id: 'evt_tn_semiconductor_2026',
-              title: 'Tamil Nadu Announces ₹12,000 Cr Semiconductor Packaging & Assembly Hub',
-              summary: 'State cabinet clears mega incentive policy to establish high-precision testing, OSAT, and chip design centers.',
-              region: 'Tamil Nadu',
-              category: 'AI & Technology',
-              importanceLabel: 'IMPORTANT',
-              importanceScore: 85,
-              finalRankScore: 88,
-              whyItMatters: 'Accelerates regional industrial transformation and creates thousands of high-tech engineering opportunities.',
-              estimatedReadTime: '3 min read',
-              relatedConcepts: ['Semiconductors', 'Industrial Policy', 'Supply Chains'],
-              firstPublishedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-              lastUpdatedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-              sourceCount: 2,
-              sources: [{ name: 'The Hindu', url: 'https://thehindu.com', publishedAt: new Date().toISOString(), tier: 1 }],
-            },
-          ]);
-        }
-
-        if (briefRes.status === 'fulfilled' && briefRes.value.length > 0) {
-          setBriefStories(briefRes.value.slice(0, 1));
-        } else {
-          setBriefStories([
-            {
-              id: 'evt_macro_rates_2026',
-              title: 'Global Macroeconomic Realignment: Inflation Anchoring & Central Bank Mandates',
-              summary: 'A curated overview of how global monetary policies interact with domestic price indices and employment trajectories.',
-              region: 'World',
-              category: 'Economy & Money',
-              importanceLabel: 'IMPORTANT',
-              importanceScore: 94,
-              finalRankScore: 96,
-              whyItMatters: 'Establishes the macroeconomic foundation required to evaluate corporate hiring, currency volatility, and investment climate.',
-              estimatedReadTime: '4 min read',
-              relatedConcepts: ['Monetary Policy', 'Inflation', 'Liquidity Pools'],
-              firstPublishedAt: new Date().toISOString(),
-              lastUpdatedAt: new Date().toISOString(),
-              sourceCount: 3,
-              sources: [{ name: 'Bloomberg', url: 'https://bloomberg.com', publishedAt: new Date().toISOString(), tier: 1 }],
-            },
-          ]);
-        }
-
-        if (masteryRes.status === 'fulfilled') {
-          setUserMastery(masteryRes.value);
-        }
-
-        if (savedRes.status === 'fulfilled') {
-          setSavedEventIds(savedRes.value);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
       }
-    }
 
-    loadDashboardData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      if (briefRes.status === 'fulfilled' && briefRes.value.length > 0) {
+        setBriefStories(briefRes.value.slice(0, 1));
+      }
+
+      if (masteryRes.status === 'fulfilled') {
+        setUserMastery(masteryRes.value);
+      }
+
+      if (savedRes.status === 'fulfilled') {
+        setSavedEventIds(savedRes.value);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData(selectedRegion);
+  }, [selectedRegion]);
+
+  const handleManualSync = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatusMsg('Fetching 14 live verified news feeds...');
+      const res = await eventService.refreshLiveFeeds();
+      if (res.success) {
+        setSyncStatusMsg('Feeds synced with latest breaking news!');
+        await loadDashboardData(selectedRegion);
+      } else {
+        setSyncStatusMsg('Sync completed.');
+      }
+      setTimeout(() => setSyncStatusMsg(null), 4000);
+    } catch {
+      setSyncStatusMsg('Sync encountered an issue.');
+      setTimeout(() => setSyncStatusMsg(null), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleToggleSave = async (eventId: string) => {
     if (!user) {
@@ -199,26 +186,26 @@ export const Dashboard: React.FC = () => {
               {greeting}, <span className="gradient-text-purple">{userName}</span>
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-              Stay informed. Understand what matters. Keep learning.
+              Real-world breaking news, corroborated sources, and structured concepts — all in one place.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
             <Button
-              onClick={() => navigate('/live')}
+              onClick={() => navigate('/all-news')}
               size="md"
               variant="primary"
-              leftIcon={<Radio className="w-4 h-4" />}
+              leftIcon={<Layers className="w-4 h-4" />}
             >
-              Live & Trending
+              All News Wire
             </Button>
             <Button
-              onClick={() => navigate('/daily-brief')}
+              onClick={() => navigate('/live')}
               size="md"
               variant="secondary"
-              leftIcon={<BookOpen className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
+              leftIcon={<Radio className="w-4 h-4 text-rose-500" />}
             >
-              Today's Brief
+              Live & Trending
             </Button>
           </div>
         </div>
@@ -230,26 +217,106 @@ export const Dashboard: React.FC = () => {
         {/* Left 2 Cols: Live Updates & Today's Brief */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Section: Live & Trending Preview */}
+          {/* Section: Live & Breaking News Section */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400">
-                  <Radio className="w-4 h-4" />
+                  <Flame className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Live & Trending</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">High-velocity developments ranked across Tamil Nadu, India, and World</p>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Today's Breaking & Live Updates</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 font-extrabold uppercase">
+                      Live
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Continuously ranked across 14 verified feeds in Tamil Nadu, India, and World
+                  </p>
                 </div>
               </div>
 
-              <Link
-                to="/live"
-                className="text-xs font-bold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 flex items-center gap-1 transition-colors"
+              {/* Sync Button & View All Link */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
+                  title="Fetch fresh articles from all RSS sources"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-500' : ''}`} />
+                  <span>{isSyncing ? 'Syncing...' : 'Sync News'}</span>
+                </button>
+
+                <Link
+                  to="/all-news"
+                  className="text-xs font-bold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 flex items-center gap-1 transition-colors px-2 py-1.5"
+                >
+                  <span>All News Stream</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Sync Feedback Alert */}
+            {syncStatusMsg && (
+              <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-500/30 text-xs text-cyan-800 dark:text-cyan-300 flex items-center gap-2 animate-fadeIn">
+                <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <span>{syncStatusMsg}</span>
+              </div>
+            )}
+
+            {/* Regional Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedRegion('ALL')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  selectedRegion === 'ALL'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
-                <span>View Top 10</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
+                All Regions
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRegion('Tamil Nadu')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  selectedRegion === 'Tamil Nadu'
+                    ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-900 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <Landmark className="w-3 h-3 text-amber-500" />
+                <span>Tamil Nadu</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRegion('India')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  selectedRegion === 'India'
+                    ? 'bg-orange-600 text-white dark:bg-orange-500 dark:text-slate-900 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <Flag className="w-3 h-3 text-orange-500" />
+                <span>India</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRegion('World')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  selectedRegion === 'World'
+                    ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-slate-900 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <Globe className="w-3 h-3 text-blue-500" />
+                <span>World</span>
+              </button>
             </div>
 
             {loading ? (
@@ -268,6 +335,7 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
           </section>
+
 
           {/* Section: Today's Curated Brief */}
           <section className="space-y-4">

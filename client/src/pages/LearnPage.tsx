@@ -1,32 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   GraduationCap, 
-  BookOpen, 
+  Flame, 
+  Clock,
   CheckCircle2, 
   Layers, 
   GitBranch, 
   ArrowRight, 
-  Lightbulb
+  Sparkles, 
+  RotateCw, 
+  TrendingUp, 
+  Target, 
+  Compass,
+  ChevronRight
 } from 'lucide-react';
-import { Concept, MultiLevelExplanation } from '../types';
-import { Badge, MasteryBadge } from '../components/ui/Badge';
+import { 
+  Concept, 
+  MultiLevelExplanation, 
+  LearningDashboardData, 
+  DueReviewItem, 
+  LearningRecommendation 
+} from '../types';
+import { MasteryBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
+import { learningService } from '../services/learningService';
 
 export const LearnPage: React.FC = () => {
+  const { user, token, openAuthModal, devLogin } = useAuth();
   const [searchParams] = useSearchParams();
-  const activeSlug = searchParams.get('concept') || 'monetary-policy';
-  const [activeTab, setActiveTab] = useState<'overview' | 'prerequisites' | 'multi-level' | 'key-takeaways'>('overview');
-  const [explanationLevel, setExplanationLevel] = useState<keyof MultiLevelExplanation>('student');
+  const activeConceptSlug = searchParams.get('concept') || 'monetary-policy';
 
-  // Hardcoded rich concept dataset for Phase 2 frontend foundation
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'concepts'>('dashboard');
+  const [explanationLevel, setExplanationLevel] = useState<keyof MultiLevelExplanation>('student');
+  const [selectedConceptSlug, setSelectedConceptSlug] = useState<string>(activeConceptSlug);
+
+  // Phase 7 Dashboard State
+  const [dashboardData, setDashboardData] = useState<LearningDashboardData | null>(null);
+  const [dueReviews, setDueReviews] = useState<DueReviewItem[]>([]);
+  const [recommendations, setRecommendations] = useState<LearningRecommendation[]>([]);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const fetchLearningData = async () => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      setRefreshing(true);
+      const [prog, reviewsRes, recs] = await Promise.all([
+        learningService.getProgress(),
+        learningService.getDueReviews(20),
+        learningService.getRecommendations(6),
+      ]);
+
+      if (prog) setDashboardData(prog);
+      if (reviewsRes?.items) setDueReviews(reviewsRes.items);
+      if (recs) setRecommendations(recs);
+    } catch (err) {
+      console.warn('[LearnPage] Failed to fetch learning data:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLearningData();
+  }, [user, token]);
+
+  // Concept Library Data
   const concepts: Concept[] = [
     {
       id: 'monetary-policy',
       title: 'Monetary Policy',
       slug: 'monetary-policy',
       category: 'Economy & Money',
-      shortDefinition: 'The strategic framework and operational tools used by a nation’s central bank to control the supply of money, credit availability, and benchmark interest rates.',
+      shortDefinition: 'The strategic framework and operational tools used by a central bank to control the supply of money, credit availability, and benchmark interest rates.',
       fullExplanation: 'Monetary policy is the primary macroeconomic steering wheel used by central banks (such as the RBI or the Federal Reserve) to promote maximum sustainable employment while keeping consumer price inflation near a stable target (typically 2–4%). When inflation accelerates, central banks employ contractionary policy by increasing policy rates. Conversely, during slowdowns, expansionary rate cuts stimulate lending and commercial investment.',
       prerequisites: [
         { id: 'inflation', title: 'Inflation', description: 'The continuous, generalized increase in aggregate prices of goods and services over time.' },
@@ -99,243 +149,465 @@ export const LearnPage: React.FC = () => {
     },
   ];
 
-  const currentConcept = concepts.find((c) => c.slug === activeSlug || c.id === activeSlug) || concepts[0];
-
-  // Learning Paths (Section 10 requirement)
-  const learningPaths = [
-    {
-      id: 'path-macro',
-      title: 'Global Macroeconomics & Monetary System',
-      category: 'Economy',
-      stepCount: 6,
-      concepts: ['Inflation', 'Interest Rates', 'Central Bank', 'Monetary Policy', 'Yield Curves'],
-    },
-    {
-      id: 'path-ai-safety',
-      title: 'AI Safety, Alignment & Global Law',
-      category: 'AI & Tech',
-      stepCount: 5,
-      concepts: ['Neural Weights', 'Training Corpora', 'AI Governance', 'Algorithmic Audits'],
-    },
-    {
-      id: 'path-cloud-sec',
-      title: 'Enterprise Cyber Defense & Identity',
-      category: 'Security',
-      stepCount: 4,
-      concepts: ['OAuth Tokens', 'Zero-Day Flaws', 'Zero Trust', 'Cloud IAM'],
-    },
-  ];
+  const currentConcept = concepts.find((c) => c.slug === selectedConceptSlug || c.id === selectedConceptSlug) || concepts[0];
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn pb-12">
       
       {/* 1. Header Banner */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-50 via-white to-indigo-50 dark:from-purple-950/60 dark:via-slate-900 dark:to-indigo-950/60 border border-purple-200 dark:border-purple-500/30 shadow-sm dark:shadow-glass">
-        <div className="flex items-center gap-2 text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider mb-2">
-          <GraduationCap className="w-4 h-4" />
-          <span>Interactive Concept Library</span>
-        </div>
-        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Learn the Fundamentals Behind Real-World News
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed mt-2">
-          Master the core building blocks so you understand why events happen, how mechanisms function, and what could occur next.
-        </p>
-      </div>
-
-      {/* 2. Concept Selector Pills */}
-      <div className="space-y-2">
-        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-          Select Concept To Study:
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {concepts.map((concept) => (
-            <Link
-              key={concept.id}
-              to={`/learn?concept=${concept.slug}`}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 border ${
-                currentConcept.id === concept.id
-                  ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/25'
-                  : 'bg-white text-slate-700 hover:text-slate-950 border-slate-200 hover:border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white dark:border-white/5 dark:hover:border-white/20'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>{concept.title}</span>
-              {concept.masteryStatus && (
-                <MasteryBadge status={concept.masteryStatus} size="xs" />
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* 3. Main Concept Card */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-glass space-y-6">
-        
-        {/* Header Row */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-white/10">
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900/40 via-slate-900 to-indigo-950/60 border border-purple-500/30 shadow-glass backdrop-blur-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <Badge variant="concept" size="sm">{currentConcept.category}</Badge>
-              {currentConcept.masteryStatus && (
-                <MasteryBadge status={currentConcept.masteryStatus} size="sm" />
-              )}
+            <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest mb-2">
+              <GraduationCap className="w-4 h-4 text-purple-400" />
+              <span>AKIRA Learning & Spaced Repetition Engine</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {currentConcept.title}
-            </h2>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Personalized Real-World Learning
+            </h1>
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed mt-2">
+              Transform news events into durable long-term knowledge. AKIRA tracks what you understand, identifies weak concepts, and schedules active recall reviews.
+            </p>
           </div>
 
-          {/* Tab Selector */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5">
-            {(['overview', 'multi-level', 'prerequisites', 'key-takeaways'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                  activeTab === tab
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                {tab.replace('-', ' ')}
-              </button>
-            ))}
-          </div>
+          {/* Quick Streak & Mastery Badge */}
+          {user && (
+            <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-700/80 p-3.5 rounded-2xl shrink-0 backdrop-blur-md">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                <Flame className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="text-xs text-slate-400 font-medium">Active Streak</div>
+                <div className="text-xl font-black text-white flex items-baseline gap-1">
+                  <span>{dashboardData?.currentStreak || 0}</span>
+                  <span className="text-xs text-slate-400 font-normal">days</span>
+                </div>
+              </div>
+              <div className="h-8 w-px bg-slate-700 mx-2" />
+              <div>
+                <div className="text-xs text-slate-400 font-medium">Mastery</div>
+                <div className="text-xl font-black text-purple-400">
+                  {dashboardData?.overallMastery || 0}%
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Tab 1: Overview */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                <Lightbulb className="w-3.5 h-3.5" />
-                <span>Plain English Definition</span>
-              </span>
-              <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed">
-                {currentConcept.shortDefinition}
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-800">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'dashboard'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            <span>My Learning Profile</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('concepts')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'concepts'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Knowledge Concept Library</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. TAB CONTENT */}
+      {activeTab === 'dashboard' ? (
+        <div className="space-y-8">
+          
+          {/* Guest / Unauthenticated Notice */}
+          {!user && (
+            <div className="p-6 rounded-3xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-400">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Sign In to Track Your Personal Learning Profile</h3>
+                  <p className="text-sm text-slate-400">
+                    Sign in to track active streaks, record quiz scores, and receive automated SM-2 spaced repetition review schedules.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="primary" onClick={openAuthModal}>
+                  Sign In / Create Account
+                </Button>
+                <Button variant="outline" onClick={() => devLogin('user')}>
+                  Demo Mode
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* New User Honest Empty State */}
+          {user && dashboardData?.isNewUser && (
+            <div className="p-8 rounded-3xl bg-gradient-to-br from-slate-900/90 via-purple-950/20 to-slate-900/90 border border-purple-500/30 text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto">
+                <Compass className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Your Learning Journey Starts Here</h2>
+              <p className="text-slate-300 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+                You haven’t completed any active recall quizzes yet. Explore current real-world news events, read the grounded explanations, and test your understanding to activate your personalized spaced repetition schedule.
               </p>
+              <div className="pt-2 flex justify-center gap-3">
+                <Link to="/">
+                  <Button variant="primary" className="gap-2">
+                    <Compass className="w-4 h-4" />
+                    <span>Explore Top Ranked Events</span>
+                  </Button>
+                </Link>
+                <Link to="/explore">
+                  <Button variant="outline" className="gap-2">
+                    <Layers className="w-4 h-4" />
+                    <span>Browse Knowledge Domains</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Overview Grid (When User Has Data) */}
+          {user && !dashboardData?.isNewUser && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              {/* Card 1: Overall Mastery */}
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-purple-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+                  <span>Overall Mastery</span>
+                  <Target className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="my-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{dashboardData?.overallMastery || 0}%</span>
+                  <span className="text-xs font-medium text-slate-400">
+                    {dashboardData?.overallMastery && dashboardData.overallMastery >= 80 ? 'Strong' : dashboardData?.overallMastery && dashboardData.overallMastery >= 50 ? 'Developing' : 'Building'}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${dashboardData?.overallMastery || 0}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Card 2: Spaced Repetition Due Queue */}
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-amber-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+                  <span>Due Today Reviews</span>
+                  <Clock className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="my-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-amber-400">{dashboardData?.dueReviewsCount || 0}</span>
+                  <span className="text-xs text-slate-400">items ready</span>
+                </div>
+                <div className="text-xs text-slate-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{dashboardData?.completedReviewsCount || 0} reviews completed</span>
+                </div>
+              </div>
+
+              {/* Card 3: Active Streak */}
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-orange-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+                  <span>Learning Streak</span>
+                  <Flame className="w-4 h-4 text-orange-400" />
+                </div>
+                <div className="my-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-orange-400">{dashboardData?.currentStreak || 0}</span>
+                  <span className="text-xs text-slate-400">consecutive days</span>
+                </div>
+                <div className="text-xs text-slate-400">
+                  <span>Best streak: </span>
+                  <strong className="text-slate-200">{dashboardData?.longestStreak || 0} days</strong>
+                </div>
+              </div>
+
+              {/* Card 4: Knowledge Mastery Breakdown */}
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+                  <span>Concepts Mastered</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="my-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-emerald-400">{dashboardData?.conceptsLearned || 0}</span>
+                  <span className="text-xs text-slate-400">of {dashboardData?.totalItemsTracked || 0} tracked</span>
+                </div>
+                <div className="text-xs text-slate-400 flex items-center gap-2">
+                  <span className="text-yellow-400 font-semibold">{dashboardData?.conceptsDeveloping || 0} developing</span>
+                  <span>•</span>
+                  <span className="text-rose-400 font-semibold">{dashboardData?.conceptsNeedingLearning || 0} focus</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. DUE TODAY SPACED REPETITION QUEUE */}
+          {user && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-400" />
+                  <h2 className="text-xl font-extrabold text-white tracking-tight">Today’s Due Reviews (SM-2 Spaced Repetition)</h2>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+                    {dueReviews.length}
+                  </span>
+                </div>
+                {refreshing && (
+                  <span className="text-xs text-slate-400 flex items-center gap-1 animate-spin">
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </span>
+                )}
+              </div>
+
+              {dueReviews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dueReviews.map((item) => (
+                    <div 
+                      key={item.id}
+                      className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 transition-all backdrop-blur-md flex flex-col justify-between space-y-4"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md">
+                            {item.category}
+                          </span>
+                          <MasteryBadge status={item.masteryStatus} />
+                        </div>
+                        <h3 className="text-base font-bold text-white leading-snug line-clamp-2">
+                          {item.title}
+                        </h3>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                        <div className="flex items-center gap-3">
+                          <span>Interval: <strong className="text-slate-200">{item.intervalDays}d</strong></span>
+                          <span>Reps: <strong className="text-slate-200">{item.repetitionCount}</strong></span>
+                        </div>
+                        <Link to={item.eventId ? `/event/${item.eventId}` : `/learn?concept=${item.conceptId}`}>
+                          <Button size="sm" variant="primary" className="gap-1.5 text-xs py-1 px-3">
+                            <span>Review Now</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-2">
+                  <div className="text-emerald-400 font-bold flex items-center justify-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>All Caught Up! No Reviews Due Right Now</span>
+                  </div>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Your scheduled memory reinforcements are on track. Continue discovering new events or explore the concept graph below.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. RECOMMENDATIONS & WEAK CONCEPTS SECTION */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left 2 Cols: Personalized Next Steps */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <h2 className="text-lg font-bold text-white tracking-tight">Recommended Next Steps</h2>
+              </div>
+
+              <div className="space-y-3">
+                {recommendations.length > 0 ? (
+                  recommendations.map((rec, i) => (
+                    <div 
+                      key={i}
+                      className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all flex items-start justify-between gap-4"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                            rec.type === 'REVIEW_DUE' ? 'bg-amber-500/20 text-amber-300' :
+                            rec.type === 'WEAK_CONCEPT' ? 'bg-rose-500/20 text-rose-300' :
+                            rec.type === 'CONTINUE_LEARNING' ? 'bg-indigo-500/20 text-indigo-300' :
+                            'bg-purple-500/20 text-purple-300'
+                          }`}>
+                            {rec.type.replace('_', ' ')}
+                          </span>
+                          {rec.category && <span className="text-xs text-slate-500">• {rec.category}</span>}
+                        </div>
+                        <h4 className="text-sm font-bold text-white">{rec.title}</h4>
+                        <p className="text-xs text-slate-400 leading-relaxed">{rec.reason}</p>
+                      </div>
+
+                      <Link to={rec.eventId ? `/event/${rec.eventId}` : `/learn?concept=${rec.conceptId || ''}`}>
+                        <Button size="sm" variant="outline" className="shrink-0 text-xs py-1 px-2.5 mt-1">
+                          <span>Action</span>
+                          <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">
+                    Explore top real-world news to receive personalized learning recommendations.
+                  </div>
+                )}
+              </div>
             </div>
 
-            {currentConcept.fullExplanation && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Detailed Explanation
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {currentConcept.fullExplanation}
-                </p>
+            {/* Right Col: Category Mastery Distribution */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-indigo-400" />
+                <h2 className="text-lg font-bold text-white tracking-tight">Category Mastery</h2>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Tab 2: 5-Tier Adaptive Multi-Level Explanations */}
-        {activeTab === 'multi-level' && (
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-200 dark:border-white/5">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-2">Explanation Depth:</span>
-              {(['verySimple', 'beginner', 'student', 'technical', 'deepDive'] as const).map((lvl) => (
+              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                {dashboardData?.categoryProgress && Object.keys(dashboardData.categoryProgress).length > 0 ? (
+                  Object.entries(dashboardData.categoryProgress).map(([catName, score]) => (
+                    <div key={catName} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-slate-300">{catName}</span>
+                        <span className="text-purple-400 font-bold">{score}%</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className="bg-purple-500 h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-xs text-slate-500">
+                    No category mastery recorded yet. Complete quizzes to unlock domain analytics.
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      ) : (
+        /* 5. CONCEPT LIBRARY TAB */
+        <div className="space-y-8">
+          
+          {/* Concept Selector Pills */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              Select Concept To Study:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {concepts.map((c) => (
                 <button
-                  key={lvl}
-                  onClick={() => setExplanationLevel(lvl)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                    explanationLevel === lvl
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-white dark:border-white/5'
+                  key={c.id}
+                  onClick={() => setSelectedConceptSlug(c.slug)}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 border ${
+                    selectedConceptSlug === c.slug
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-500/20'
+                      : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  {lvl.replace(/([A-Z])/g, ' $1')}
+                  <span>{c.title}</span>
+                  <MasteryBadge status={c.masteryStatus} />
                 </button>
               ))}
             </div>
-
-            <div className="p-5 rounded-2xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-500/20 space-y-2">
-              <span className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider block">
-                {explanationLevel.replace(/([A-Z])/g, ' $1')} Perspective:
-              </span>
-              <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans">
-                {currentConcept.multiLevelExplanations?.[explanationLevel]}
-              </p>
-            </div>
           </div>
-        )}
 
-        {/* Tab 3: Prerequisites Pathway */}
-        {activeTab === 'prerequisites' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <GitBranch className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>Prerequisite Foundations</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {currentConcept.prerequisites.map((req, idx) => (
-                <div key={req.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-white/5 space-y-1.5">
-                  <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider block">
-                    STEP {idx + 1}
-                  </span>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">{req.title}</h4>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{req.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: Key Takeaways */}
-        {activeTab === 'key-takeaways' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Key Takeaways & Mental Models</span>
-            </h3>
-
-            <div className="space-y-2.5">
-              {currentConcept.keyTakeaways?.map((takeaway, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 flex items-start gap-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                  <span>{takeaway}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* 4. Structured Learning Paths (Section 10 Requirement) */}
-      <div className="space-y-4 pt-4">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Layers className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          <span>Curated Learning Pathways</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {learningPaths.map((path) => (
-            <div key={path.id} className="p-5 rounded-2xl bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-white/10 hover:border-purple-500/30 shadow-sm dark:shadow-glass transition-all flex flex-col justify-between space-y-4">
+          {/* Active Concept Breakdown View */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/70 border border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
               <div>
-                <Badge variant="concept" size="xs">{path.category}</Badge>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mt-2 mb-1">{path.title}</h3>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{path.stepCount} interconnected steps</span>
+                <span className="text-xs font-bold text-purple-400 uppercase tracking-wider block mb-1">
+                  {currentConcept.category}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+                  {currentConcept.title}
+                </h2>
+              </div>
+              <MasteryBadge status={currentConcept.masteryStatus} />
+            </div>
 
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {path.concepts.map((c, i) => (
-                    <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-white/5">
-                      {c}
-                    </span>
+            {/* Short Definition */}
+            <div className="p-4 rounded-2xl bg-purple-950/30 border border-purple-500/20 text-slate-200 text-sm sm:text-base leading-relaxed">
+              <strong className="text-purple-300 font-bold block mb-1">Core Definition:</strong>
+              {currentConcept.shortDefinition}
+            </div>
+
+            {/* Multi-Level Explanations Switcher */}
+            {currentConcept.multiLevelExplanations && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+                    Adaptive Complexity Level:
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(['verySimple', 'beginner', 'student', 'technical', 'deepDive'] as (keyof MultiLevelExplanation)[]).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setExplanationLevel(level)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        explanationLevel === level
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {level === 'verySimple' && 'ELI5'}
+                      {level === 'beginner' && 'Beginner'}
+                      {level === 'student' && 'Student'}
+                      {level === 'technical' && 'Technical'}
+                      {level === 'deepDive' && 'Deep Dive'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-slate-300 leading-relaxed font-sans">
+                  {currentConcept.multiLevelExplanations[explanationLevel]}
+                </div>
+              </div>
+            )}
+
+            {/* Prerequisites Map */}
+            {currentConcept.prerequisites && currentConcept.prerequisites.length > 0 && (
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider">
+                  <GitBranch className="w-4 h-4 text-indigo-400" />
+                  <span>Knowledge Graph Prerequisites</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {currentConcept.prerequisites.map((p) => (
+                    <div key={p.id} className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+                      <div className="text-xs font-bold text-indigo-300">{p.title}</div>
+                      <div className="text-[11px] text-slate-400 leading-snug">{p.description}</div>
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
+          </div>
 
-              <Button size="xs" variant="secondary" className="w-full" rightIcon={<ArrowRight className="w-3 h-3" />}>
-                Start Pathway
-              </Button>
-            </div>
-          ))}
         </div>
-      </div>
+      )}
 
     </div>
   );
 };
+
+export default LearnPage;

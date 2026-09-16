@@ -1,6 +1,7 @@
 export type RegionType = 'Tamil Nadu' | 'India' | 'World' | 'ALL';
 export type ImportanceLabelType = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
 export type ImportanceLevel = 'MUST_KNOW' | 'IMPORTANT' | 'INTERESTING' | ImportanceLabelType;
+export type ExplanationLevel = 'verySimple' | 'beginner' | 'student' | 'technical' | 'deepDive';
 
 export type CategorySlug = string;
 
@@ -50,20 +51,27 @@ export interface ArticleItem {
 }
 
 export interface CorroboratingSource {
+  id?: string;
   name: string;
+  sourceName?: string;
   url: string;
+  title?: string;
+  snippet?: string;
   publishedAt: string;
   tier: number;
   credibility?: string;
 }
 
-export interface StructuredBreakdown {
+export interface FiveWOneH {
   whatHappened: string;
   whyDidItHappen: string;
   whyDoesItMatter: string;
   whoIsAffected: string[];
   whatCouldHappenNext: string[];
   background: string;
+}
+
+export interface StructuredBreakdown extends FiveWOneH {
   relatedConcepts?: string[];
 }
 
@@ -75,22 +83,88 @@ export interface MultiLevelExplanation {
   deepDive: string;
 }
 
+export interface RankingMetadata {
+  trendScore: number;
+  importanceScore: number;
+  finalRankScore: number;
+  velocityScore: number;
+  coverageScore: number;
+  recencyScore: number;
+  freshnessScore: number;
+  spreadScore: number;
+  regionalRelevanceScore: number;
+  independentSourceCount: number;
+  trendStatus: 'NORMAL' | 'RISING' | 'TRENDING' | 'HIGHLY_TRENDING';
+  importanceStatus: 'LOW' | 'MODERATE' | 'IMPORTANT' | 'CRITICAL';
+  breakingStatus: boolean;
+  freshnessState: 'FRESH' | 'RECENT' | 'AGING' | 'STALE' | 'SOURCE_UNAVAILABLE';
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  explanation: string;
+}
+
+export interface ExtractedConceptItem {
+  id: string;
+  title: string;
+  slug: string;
+  shortDefinition: string;
+  whyItMatters?: string;
+  category?: string;
+  prerequisites?: string[];
+}
+
+export interface QuizQuestion {
+  id: number | string;
+  question: string;
+  options: string[];
+  correctAnswer?: number;
+  correctIndex?: number;
+  explanation?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export interface QuizSubmission {
+  answers: Record<string | number, number>;
+}
+
+export interface QuizResultItem {
+  questionId: number;
+  question: string;
+  selectedAnswer: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+export interface QuizResult {
+  eventId: string;
+  totalQuestions: number;
+  correctCount: number;
+  scorePercentage: number;
+  masteryStatus: 'NEEDS_LEARNING' | 'DEVELOPING' | 'STRONG';
+  results: QuizResultItem[];
+  timestamp: string;
+}
+
 export interface CanonicalEvent {
   id: string;
   title: string;
   summary: string;
-  region: 'Tamil Nadu' | 'India' | 'World';
+  region: 'Tamil Nadu' | 'India' | 'World' | string;
+  regionId?: string;
   category: string;
+  categoryId?: string;
   importanceLabel: ImportanceLabelType;
+  urgencyLabel?: string;
   importanceLevel?: string;
   importanceScore: number;
   velocityScore?: number;
   trendScore?: number;
   finalRankScore: number;
+  rankingMetadata?: RankingMetadata;
   whyItMatters: string;
-  estimatedReadTime: string;
-  relatedConcepts: string[];
-  sources: CorroboratingSource[];
+  estimatedReadTime?: string;
+  relatedConcepts?: string[];
+  sources?: CorroboratingSource[];
   source?: string;
   originalUrl?: string;
   publishedAt?: string;
@@ -99,7 +173,7 @@ export interface CanonicalEvent {
   sourceCount: number;
   breakdown?: StructuredBreakdown;
   explanations?: MultiLevelExplanation;
-  concepts?: { id: string; title: string; desc: string }[];
+  concepts?: ExtractedConceptItem[];
   quiz?: QuizQuestion[];
   isSaved?: boolean;
 }
@@ -127,14 +201,6 @@ export interface Concept {
   attemptsCount?: number;
   correctCount?: number;
   lastAttemptAt?: string;
-}
-
-export interface QuizQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
 }
 
 export interface ConceptChainStep {
@@ -185,4 +251,76 @@ export interface SavedItem {
   region: string;
   savedAt: string;
   importanceLabel: ImportanceLabelType;
+}
+
+// ============================================================================
+// PHASE 7: LEARNING, SPACED REPETITION & PERSONALIZATION TYPES
+// ============================================================================
+
+export type ReviewStatus = 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+
+export interface DueReviewItem {
+  id: string;
+  eventId?: string;
+  conceptId?: string;
+  title: string;
+  category: string;
+  masteryScore: number;
+  masteryStatus: MasteryStatus;
+  status: ReviewStatus;
+  intervalDays: number;
+  easeFactor: number;
+  repetitionCount: number;
+  lastReviewedAt?: string;
+  nextReviewAt: string;
+  isOverdue: boolean;
+  overdueHours: number;
+  recommendedExplanationLevel: ExplanationLevel;
+}
+
+export interface LearningRecommendation {
+  type: 'REVIEW_DUE' | 'WEAK_CONCEPT' | 'CONTINUE_LEARNING' | 'NEW_CONCEPT';
+  title: string;
+  reason: string;
+  eventId?: string;
+  conceptId?: string;
+  category?: string;
+  masteryScore?: number;
+  priority: number;
+}
+
+export interface QuizAttemptRecord {
+  id: string;
+  userId: string;
+  eventId: string;
+  conceptId?: string;
+  score: number;
+  totalQuestions: number;
+  accuracy: number;
+  scorePercentage: number;
+  masteryStatus: MasteryStatus;
+  answers: Record<string | number, number>;
+  submittedAt: string;
+}
+
+export interface LearningDashboardData {
+  overallMastery: number;
+  totalItemsTracked: number;
+  conceptsLearned: number;
+  conceptsDeveloping: number;
+  conceptsNeedingLearning: number;
+  dueReviewsCount: number;
+  completedReviewsCount: number;
+  currentStreak: number;
+  longestStreak: number;
+  categoryProgress: Record<string, number>;
+  recentActivity: QuizAttemptRecord[];
+  weakConcepts: DueReviewItem[];
+  isNewUser: boolean;
+}
+
+export interface DueReviewsResponse {
+  dueCount: number;
+  totalScheduled: number;
+  items: DueReviewItem[];
 }

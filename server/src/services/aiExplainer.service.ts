@@ -1,4 +1,5 @@
 import { CanonicalEvent } from './newsIngestion.service.js';
+import { aiService } from './ai/aiService.js';
 
 export interface GeneratedEventAnalysis {
   event: CanonicalEvent;
@@ -17,17 +18,21 @@ export interface GeneratedEventAnalysis {
     technical: string;
     deepDive: string;
   };
-  concepts: { id: string; title: string; desc: string }[];
+  concepts: { id: string; title: string; desc: string; prerequisites?: string[] }[];
   quiz: {
-    id: number;
+    id: string | number;
     question: string;
     options: string[];
-    correctIndex: number;
+    correctIndex?: number;
+    correctOptionIndex?: number;
     explanation: string;
   }[];
 }
 
 class AIExplainerService {
+  /**
+   * Synchronous analysis generator for backward compatibility
+   */
   public generateAnalysisForEvent(event: CanonicalEvent): GeneratedEventAnalysis {
     const title = event.title;
     const summary = event.summary;
@@ -35,7 +40,6 @@ class AIExplainerService {
     const region = event.region || event.regionId || 'World';
     const whyItMatters = event.whyItMatters;
 
-    // 7-Part Breakdown
     const breakdown = {
       whatHappened: summary || `${title} has been confirmed across multi-source verified reporting in ${region} within ${category}.`,
       whyDidItHappen: `Structural factors, state/national administrative announcements, and strategic shifts converged to trigger this event in ${region}.`,
@@ -54,7 +58,6 @@ class AIExplainerService {
       background: `Previous developments in ${region} established the groundwork leading up to this disclosure. Understanding this event requires familiarity with core domain mechanisms.`
     };
 
-    // 5 Progressive Difficulty Levels
     const explanations = {
       verySimple: `In simple words: "${title}". This matters because people, businesses, and leaders in ${region} are making important adjustments to keep things running better.`,
       beginner: `Here is the essential takeaway: This development takes place in ${region} under ${category}. When policy or technology changes here, it creates a chain reaction for public services and everyday life.`,
@@ -63,7 +66,6 @@ class AIExplainerService {
       deepDive: `Systems & Strategic Analysis: Examining "${title}" reveals underlying macroeconomic and regional equilibria in ${region}. Stakeholders must evaluate second-order incentives and long-term institutional shifts.`
     };
 
-    // Concepts
     const concepts = (event.relatedConcepts && event.relatedConcepts.length > 0)
       ? event.relatedConcepts.map((c: string) => ({
           id: c.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -75,7 +77,6 @@ class AIExplainerService {
           { id: 'impact-analysis', title: 'Impact Analysis', desc: 'Evaluating primary and secondary consequences.' }
         ];
 
-    // Adaptive 3-Question Understanding Quiz
     const quiz = [
       {
         id: 1,
@@ -87,6 +88,7 @@ class AIExplainerService {
           'It immediately stops all economic activity permanently.'
         ],
         correctIndex: 0,
+        correctOptionIndex: 0,
         explanation: 'Multi-source verified reporting confirms direct real-world significance.'
       },
       {
@@ -97,6 +99,7 @@ class AIExplainerService {
           'False — Real-world events have zero consequences.'
         ],
         correctIndex: 0,
+        correctOptionIndex: 0,
         explanation: 'Modern policy, tech, and economic updates create systemic secondary effects.'
       },
       {
@@ -108,12 +111,32 @@ class AIExplainerService {
           'Assume that laws and policies will never evolve.'
         ],
         correctIndex: 0,
+        correctOptionIndex: 0,
         explanation: 'Grounded decision-making starts with reviewing verified reports and foundational mechanisms.'
       }
     ];
 
     return {
       event,
+      breakdown,
+      explanations,
+      concepts,
+      quiz
+    };
+  }
+
+  /**
+   * Async analysis generator backed by full Phase 6 AIService
+   */
+  public async getFullAnalysisAsync(eventId: string): Promise<any> {
+    const [breakdown, explanations, concepts, quiz] = await Promise.all([
+      aiService.get5W1H(eventId),
+      aiService.getAllExplanations(eventId),
+      aiService.getConcepts(eventId),
+      aiService.getQuiz(eventId)
+    ]);
+
+    return {
       breakdown,
       explanations,
       concepts,

@@ -14,164 +14,292 @@ import {
   History, 
   Lightbulb, 
   Check, 
-  X,
-  RotateCw
+  X, 
+  RotateCw, 
+  Award, 
+  GitBranch, 
+  Info, 
+  RefreshCw 
 } from 'lucide-react';
-import { apiClient } from '../services/api';
+import { eventService } from '../services/eventService';
+import { 
+  CanonicalEvent, 
+  FiveWOneH, 
+  ExplanationLevel, 
+  ExtractedConceptItem, 
+  QuizQuestion, 
+  QuizResult 
+} from '../types';
 
 export const EventDetailPage: React.FC = () => {
-  const { id } = useParams();
-  const [explainLevel, setExplainLevel] = useState<'verySimple' | 'beginner' | 'student' | 'technical' | 'deepDive'>('beginner');
+  const { id } = useParams<{ id: string }>();
+  const [event, setEvent] = useState<CanonicalEvent | null>(null);
+  const [breakdown, setBreakdown] = useState<FiveWOneH | null>(null);
+  const [explainLevel, setExplainLevel] = useState<ExplanationLevel>('beginner');
+  const [explanationsCache, setExplanationsCache] = useState<Partial<Record<ExplanationLevel, string>>>({});
+  const [concepts, setConcepts] = useState<ExtractedConceptItem[]>([]);
+  const [selectedConcept, setSelectedConcept] = useState<ExtractedConceptItem | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string | number, number>>({});
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Quiz state
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  const [showResults, setShowResults] = useState(false);
-
-  // Default fallback data structure
-  const [eventData, setEventData] = useState({
-    id: id || 'story-1',
-    title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
-    category: 'Economy & Money',
-    source: 'Financial Times & Reuters Wire',
-    originalUrl: 'https://www.reuters.com/markets/rates-bonds/',
-    publishedAt: 'September 12, 2026 • 2 hours ago',
-    importanceLevel: 'MUST_KNOW',
-    importanceScore: 92,
-    
-    breakdown: {
-      whatHappened: 'Major central banks across key emerging and developed economies have signaled a transition in interest rate policy, adjusting repo rates and statutory reserve targets to stabilize consumer prices while avoiding industrial slowdown.',
-      whyDidItHappen: 'Post-supply-chain stabilization, combined with shifting commodity import costs and currency liquidity fluctuations, prompted monetary policy committees to re-calibrate benchmark lending rates.',
-      whyDoesItMatter: 'Directly dictates borrowing costs for personal home loans, commercial lines of credit, foreign institutional investment flows (FIIs), and overall consumer inflation rates.',
-      whoIsAffected: [
-        'Homeowners and car loan borrowers (monthly EMI adjustments)',
-        'Small and Medium Enterprises (working capital borrowing rates)',
-        'Equity and Bond Market Investors (asset price valuation shifts)',
-        'Importers and Exporters (foreign exchange volatility)'
-      ],
-      whatCouldHappenNext: [
-        'Commercial retail banks may recalibrate fixed deposit (FD) and savings account interest yields within 7 business days.',
-        'Slight appreciation or stabilization in domestic currency against major trade baskets.',
-        'Next quarterly economic review will measure whether retail inflation remains within the 4.0% tolerance band.'
-      ],
-      background: 'Following unprecedented global rate hikes in previous years to curb post-pandemic inflation spikes, central banks entered a holding phase. This latest adjustment represents the first coordinated shift toward neutral-to-supportive monetary balance.'
-    },
-
-    explanations: {
-      verySimple: 'Think of the central bank as the "bank for all banks." When they change rates, borrowing money gets either cheaper or more expensive for everyone. They are making sure things don\'t get too expensive while helping businesses keep people employed.',
-      beginner: 'A central bank controls how expensive it is to borrow money. When inflation (prices of everyday items) is high, they make loans more expensive so people spend less. Now that prices are cooling down, they are balancing rates so businesses can grow without triggering high prices again.',
-      student: 'Monetary policy operates through the interest rate transmission channel. The Central Bank alters the benchmark Policy Repo Rate. Commercial banks adjust their Marginal Cost of Funds Based Lending Rate (MCLR), influencing aggregate demand (AD), investment (I), and the Consumer Price Index (CPI).',
-      technical: 'The monetary policy committee adjusted open market operations (OMO) and statutory liquidity requirements. By shifting the policy corridor, interbank call money rates realign with overnight collateralized borrowing and lending obligations (CBLO), directly shifting the sovereign yield curve.',
-      deepDive: 'Macroeconomic analysis: The central bank is responding to real positive interest rate differentials and shifts in the Taylor Rule optimal rate. With headline CPI converging towards target and core inflation softening, preserving the output gap requires moving from restrictive stance toward neutral rate ($r^*$) equilibrium.'
-    },
-
-    concepts: [
-      { id: 'inflation', title: 'Inflation', desc: 'The rate at which general price levels for goods and services rise.' },
-      { id: 'interest-rates', title: 'Interest Rates', desc: 'The cost of borrowing money or the reward for saving it.' },
-      { id: 'central-bank', title: 'Central Bank', desc: 'The national institution that manages currency and monetary policy.' },
-      { id: 'monetary-policy', title: 'Monetary Policy', desc: 'Actions taken by central banks to control money supply and promote sustainable growth.' }
-    ],
-
-    quiz: [
-      {
-        id: 1,
-        question: 'When a central bank lowers its benchmark interest rate, what is the most direct expected outcome in the economy?',
-        options: [
-          'Borrowing costs for businesses and consumers generally decrease, stimulating spending.',
-          'Borrowing costs immediately double to prevent loan taking.',
-          'Currency value triples automatically in foreign exchange markets.',
-          'Commercial banks are forbidden from issuing mortgages.'
-        ],
-        correctIndex: 0,
-        explanation: 'Lowering benchmark rates reduces borrowing costs across commercial banks, encouraging investment and consumer spending.'
-      },
-      {
-        id: 2,
-        question: 'True or False: The primary goal of shifting from a restrictive stance to a neutral stance is to balance price stability with economic growth.',
-        options: [
-          'True — Once inflation approaches the target range, central banks calibrate rates to avoid choking growth.',
-          'False — Central banks only care about corporate stock prices.'
-        ],
-        correctIndex: 0,
-        explanation: 'A neutral stance aims to neither over-stimulate inflation nor unduly suppress industrial output.'
-      },
-      {
-        id: 3,
-        question: 'Scenario: Ramesh is planning to buy a home with a floating-rate mortgage. How does a central bank rate cut likely affect his monthly EMI payments over time?',
-        options: [
-          'His floating-rate EMI or loan tenure will likely decrease as banks pass on the rate cut.',
-          'His EMI will immediately double because lower rates increase taxes.',
-          'There is zero connection between central bank benchmark rates and floating-rate loans.',
-          'The bank will cancel his loan agreement.'
-        ],
-        correctIndex: 0,
-        explanation: 'Floating-rate loans are linked to external benchmarks (like repo rate); when the benchmark drops, banks reduce lending rates.'
-      }
-    ]
-  });
-
-  useEffect(() => {
-    if (eventData.title) {
-      document.title = `${eventData.title} | AKIRA`;
-    }
-  }, [eventData.title]);
-
+  // Load canonical event and AI pillars
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
     setLoading(true);
-    apiClient.get(`/articles/${id}`)
-      .then((res) => {
-        if (res.data?.success && res.data.data) {
-          setEventData(res.data.data);
-        }
-      })
-      .catch((err) => {
-        console.warn('Using baseline context for article:', err.message);
-      })
-      .finally(() => setLoading(false));
+    setErrorMessage(null);
+
+    Promise.allSettled([
+      eventService.getEventById(id),
+      eventService.getUnderstanding(id),
+      eventService.getConcepts(id),
+      eventService.getQuiz(id),
+      eventService.getExplanation(id, 'all')
+    ]).then(([eventRes, understandingRes, conceptsRes, quizRes, explRes]) => {
+      if (!isMounted) return;
+
+      if (eventRes.status === 'fulfilled' && eventRes.value) {
+        setEvent(eventRes.value);
+        document.title = `${eventRes.value.title} | AKIRA`;
+      } else {
+        const fallbackEvt: CanonicalEvent = {
+          id: id || 'evt_sample_2026',
+          title: 'Reserve Bank & Central Banks Shift Monetary Policy Stance Amid Global Inflation Shifts',
+          summary: 'Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.',
+          region: 'India',
+          category: 'Economy',
+          importanceLabel: 'IMPORTANT',
+          importanceScore: 92,
+          velocityScore: 88,
+          finalRankScore: 94,
+          whyItMatters: 'Dictates sovereign borrowing costs, commercial lines of credit, mortgage rates, and foreign institutional flows.',
+          firstPublishedAt: new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+          sourceCount: 3,
+        };
+        setEvent(fallbackEvt);
+        document.title = `${fallbackEvt.title} | AKIRA`;
+      }
+
+      if (understandingRes.status === 'fulfilled' && understandingRes.value) {
+        setBreakdown(understandingRes.value);
+      }
+
+      if (conceptsRes.status === 'fulfilled' && conceptsRes.value && conceptsRes.value.length > 0) {
+        setConcepts(conceptsRes.value);
+      }
+
+      if (quizRes.status === 'fulfilled' && quizRes.value && quizRes.value.length > 0) {
+        setQuizQuestions(quizRes.value);
+      }
+
+      if (explRes.status === 'fulfilled' && explRes.value && typeof explRes.value === 'object') {
+        setExplanationsCache(explRes.value as any);
+      }
+    }).catch((err) => {
+      if (isMounted) setErrorMessage(err.message || 'Failed to load intelligence layer');
+    }).finally(() => {
+      if (isMounted) setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  const handleSelectAnswer = (qIndex: number, optIndex: number) => {
-    if (showResults) return;
-    setSelectedAnswers(prev => ({ ...prev, [qIndex]: optIndex }));
+  // Load explanation for level if not already in cache
+  useEffect(() => {
+    if (!id || explanationsCache[explainLevel]) return;
+
+    setLoadingExplanation(true);
+    eventService.getExplanation(id, explainLevel)
+      .then((res: any) => {
+        if (res && res.content) {
+          setExplanationsCache((prev) => ({ ...prev, [explainLevel]: res.content }));
+        }
+      })
+      .catch((err) => console.warn('[EventDetailPage] Explanation level fetch notice:', err))
+      .finally(() => setLoadingExplanation(false));
+  }, [id, explainLevel, explanationsCache]);
+
+  const handleSelectAnswer = (qId: string | number, optIndex: number) => {
+    if (quizResult) return;
+    setSelectedAnswers((prev) => ({ ...prev, [qId]: optIndex }));
   };
 
-  const calculateScore = () => {
-    let score = 0;
-    (eventData.quiz || []).forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.correctIndex) {
-        score += 1;
+  const handleSubmitQuiz = async () => {
+    if (!id || Object.keys(selectedAnswers).length === 0 || isSubmittingQuiz) return;
+    setIsSubmittingQuiz(true);
+    try {
+      const result = await eventService.submitQuiz(id, selectedAnswers);
+      if (result) {
+        setQuizResult(result);
       }
-    });
-    return score;
+    } catch (err: any) {
+      console.warn('[EventDetailPage] Quiz submit error:', err);
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
+  const handleRetakeQuiz = () => {
+    setQuizResult(null);
+    setSelectedAnswers({});
+  };
+
+  const handleToggleSave = async () => {
+    if (!id) return;
+    if (isSaved) {
+      await eventService.removeSavedEvent(id);
+      setIsSaved(false);
+    } else {
+      await eventService.saveEvent(id);
+      setIsSaved(true);
+    }
   };
 
   if (loading) {
     return (
       <div className="p-20 text-center space-y-4">
         <RotateCw className="h-8 w-8 text-brand-500 animate-spin mx-auto" />
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Generating AI comprehension breakdown & understanding quiz...</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">
+          Activating AKIRA Phase 6 AI Intelligence & Grounded Comprehension Layer...
+        </p>
       </div>
     );
   }
 
+  if (errorMessage && !event) {
+    return (
+      <div className="p-12 text-center space-y-4 max-w-lg mx-auto">
+        <Info className="h-10 w-10 text-amber-500 mx-auto" />
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Unable to Load Event</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{errorMessage}</p>
+        <Link to="/live" className="inline-block px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold">
+          Return to Live Feed
+        </Link>
+      </div>
+    );
+  }
+
+  const default5W1H: FiveWOneH = breakdown || {
+    whatHappened: event?.summary || 'Multi-source verified reporting on canonical event.',
+    whyDidItHappen: 'Structural policy convergence and administrative developments triggered this update.',
+    whyDoesItMatter: event?.whyItMatters || 'Alters statutory standards, commercial operations, and regional equilibria.',
+    whoIsAffected: [
+      `Citizens, consumers, and regional practitioners in ${event?.region || 'the region'}`,
+      'Enterprises navigating regulatory standards, financing, or supply chains',
+      'Policy administrators monitoring systemic stability'
+    ],
+    whatCouldHappenNext: [
+      'Administrative bodies will release detailed implementation guidelines.',
+      'Institutional participants will adapt operational strategies.',
+      'Quarterly milestone progress will be assessed in subsequent reviews.'
+    ],
+    background: 'Groundwork established in previous periods led to this official disclosure.'
+  };
+
+  const currentExplanation = explanationsCache[explainLevel] || (
+    explainLevel === 'verySimple'
+      ? `In simple terms: "${event?.title}". Leaders and institutions are making key updates to keep things running efficiently.`
+      : explainLevel === 'beginner'
+      ? `Essential takeaway: This takes place in ${event?.region || 'the region'} under ${event?.category || 'its domain'}. Changes here directly influence everyday operations and public services.`
+      : explainLevel === 'student'
+      ? `Analytical model: The core mechanism of "${event?.title}" functions through systemic domain dynamics. Key variables involve governance, incentives, and execution.`
+      : explainLevel === 'technical'
+      ? `Domain architecture: Structural parameters shift key dependencies. Stakeholders must review compliance guidelines, capital structures, and risk thresholds.`
+      : `Systems & Strategic Analysis: Examining "${event?.title}" reveals underlying macroeconomic and regional equilibria. Stakeholders must model second-order incentives.`
+  );
+
+  const displayConcepts: ExtractedConceptItem[] = (concepts && concepts.length > 0)
+    ? concepts
+    : [
+        {
+          id: 'policy-governance',
+          title: 'Policy & Governance',
+          slug: 'policy-governance',
+          shortDefinition: 'The framework of laws, rules, and administrative processes through which institutions govern.',
+          whyItMatters: 'Shapes statutory obligations and public resource allocation.',
+          category: event?.category || 'Governance',
+          prerequisites: []
+        },
+        {
+          id: 'impact-evaluation',
+          title: 'Impact Evaluation',
+          slug: 'impact-evaluation',
+          shortDefinition: 'The systematic analysis of primary, secondary, and long-term outcomes of an event.',
+          whyItMatters: 'Helps citizens and organizations make evidence-based decisions.',
+          category: event?.category || 'Analytics',
+          prerequisites: ['policy-governance']
+        },
+        {
+          id: 'systemic-equilibrium',
+          title: 'Systemic Equilibrium',
+          slug: 'systemic-equilibrium',
+          shortDefinition: 'The state of balance across interconnected economic, technological, or social factors.',
+          whyItMatters: 'Determines whether an intervention causes structural stability or volatility.',
+          category: event?.category || 'Systems',
+          prerequisites: ['impact-evaluation']
+        }
+      ];
+
+  const displayQuiz: QuizQuestion[] = (quizQuestions && quizQuestions.length > 0)
+    ? quizQuestions
+    : [
+        {
+          id: 1,
+          question: `Based on verified reporting on "${event?.title.slice(0, 60)}...", what is the primary significance?`,
+          options: [
+            event?.whyItMatters || 'It impacts regional governance, technology, or economic operations.',
+            'It has zero connection to real-world affairs and can be disregarded.',
+            'It immediately halts all economic activity permanently.',
+            'It is an unverified rumor with no corroborating evidence.'
+          ]
+        },
+        {
+          id: 2,
+          question: `How do structural policy and technological updates in ${event?.category || 'this domain'} typically propagate?`,
+          options: [
+            'They create interconnected secondary effects across regulations, supply chains, and public services.',
+            'They only affect employees located inside government buildings.',
+            'They reverse all historical laws instantly without notice.',
+            'They have no effect because systems operate in complete isolation.'
+          ]
+        },
+        {
+          id: 3,
+          question: `Scenario: A decision-maker or citizen is evaluating this development. What is the most evidence-based action?`,
+          options: [
+            'Review verified reporting, understand foundational concepts, and monitor official notifications.',
+            'Act impulsively based on unverified headlines and social media rumors.',
+            'Assume that laws and policies will never evolve over time.',
+            'Ignore official guidance and rely on hearsay.'
+          ]
+        }
+      ];
+
   return (
     <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto pb-16">
       
-      {/* Back button & top bar */}
+      {/* 1. Top Navigation Bar */}
       <div className="flex items-center justify-between">
         <Link 
-          to="/all-news"
+          to="/live"
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Live Stream</span>
+          <span>Back to Live & Trending</span>
         </Link>
 
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setIsSaved(!isSaved)}
+            onClick={handleToggleSave}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
               isSaved 
                 ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-brand-600/20 dark:border-brand-500 dark:text-brand-300' 
@@ -184,30 +312,37 @@ export const EventDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Header */}
+      {/* 2. Canonical Event Header */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="badge-must-know text-xs font-bold px-2.5 py-0.5 rounded-full">
-            {((eventData as any).importanceLabel || eventData.importanceLevel || 'IMPORTANT').replace('_', ' ')} • Score {eventData.importanceScore}/100
+            {(event?.importanceLabel || event?.urgencyLabel || 'IMPORTANT').replace('_', ' ')} • Rank Score {event?.finalRankScore || event?.importanceScore || 90}/100
           </span>
           <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-            {eventData.category}
+            {event?.category || event?.categoryId || 'General'}
+          </span>
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+            {event?.region || event?.regionId || 'World'}
           </span>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            {eventData.publishedAt}
+            {event?.firstPublishedAt ? new Date(event.firstPublishedAt).toLocaleDateString() : 'Recent'}
           </span>
         </div>
 
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white leading-tight">
-          {eventData.title}
+          {event?.title}
         </h1>
 
-        {/* Source citation banner */}
+        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+          {event?.summary}
+        </p>
+
+        {/* Source Citation Bar */}
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-slate-700 dark:text-slate-300 font-semibold">Reported by:</span>
-            {((eventData as any).sources && (eventData as any).sources.length > 0) ? (
-              (eventData as any).sources.map((src: any, i: number) => (
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">Corroborated Sources ({event?.sources?.length || event?.sourceCount || 1}):</span>
+            {event?.sources && event.sources.length > 0 ? (
+              event.sources.map((src, i) => (
                 <a
                   key={i}
                   href={src.url}
@@ -215,18 +350,18 @@ export const EventDetailPage: React.FC = () => {
                   rel="noopener noreferrer"
                   className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 flex items-center gap-1 font-medium transition-colors"
                 >
-                  <span>{src.name}</span>
+                  <span>{src.name || src.sourceName || 'Source'}</span>
                   <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               ))
             ) : (
-              <span className="text-slate-800 dark:text-slate-200 font-medium">{eventData.source}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-medium">{event?.source || 'Verified Wire'}</span>
             )}
           </div>
 
-          {eventData.originalUrl && (
+          {event?.originalUrl && (
             <a 
-              href={eventData.originalUrl}
+              href={event.originalUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 flex items-center gap-1 font-semibold"
@@ -238,7 +373,7 @@ export const EventDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* FEATURE 3: "EXPLAIN THIS" Multi-Level AI Selector */}
+      {/* 3. FEATURE: 5-Level Adaptive AI Explainer */}
       <div className="glass-panel p-6 rounded-2xl border border-brand-200 dark:border-brand-500/30 shadow-sm dark:shadow-glow-purple">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -246,16 +381,20 @@ export const EventDetailPage: React.FC = () => {
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">AI Explainer — Choose Your Comprehension Level</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Adaptive explanation tailored to your background knowledge.</p>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                5-Level Adaptive Explainer — Choose Comprehension Depth
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Calibrate explanation difficulty from elementary basics to professional deep dive.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* 5 Level Tabs */}
+        {/* 5 Difficulty Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-white/5 mb-4">
           {[
-            { id: 'verySimple', label: '1. Very Simple' },
+            { id: 'verySimple', label: '1. Very Simple (ELI5)' },
             { id: 'beginner', label: '2. Beginner' },
             { id: 'student', label: '3. Student' },
             { id: 'technical', label: '4. Technical' },
@@ -263,7 +402,7 @@ export const EventDetailPage: React.FC = () => {
           ].map((lvl) => (
             <button
               key={lvl.id}
-              onClick={() => setExplainLevel(lvl.id as any)}
+              onClick={() => setExplainLevel(lvl.id as ExplanationLevel)}
               className={`py-2 px-2 text-xs font-semibold rounded-lg transition-all text-center ${
                 explainLevel === lvl.id
                   ? 'bg-brand-600 text-white shadow-md'
@@ -276,56 +415,131 @@ export const EventDetailPage: React.FC = () => {
         </div>
 
         {/* Explanation Text */}
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed">
-          {eventData.explanations[explainLevel]}
+        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed min-h-[90px] flex items-center">
+          {loadingExplanation ? (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <RotateCw className="h-4 w-4 animate-spin text-brand-500" />
+              <span>Generating tailored {explainLevel} explanation...</span>
+            </div>
+          ) : (
+            <span>{currentExplanation}</span>
+          )}
         </div>
       </div>
 
-      {/* FEATURE 4: "TEACH ME" Prerequisite Learning Pathway */}
+      {/* 4. FEATURE: Concept & Prerequisite Knowledge Graph */}
       <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-white/10 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Prerequisite Concepts to Master This Event</h2>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Prerequisite Concepts & Knowledge Dependencies
+            </h2>
           </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Step-by-step learning loop</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Knowledge Graph Nodes</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {eventData.concepts.map((concept, idx) => (
-            <Link 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {displayConcepts.map((concept, idx) => (
+            <button 
               key={concept.id}
-              to={`/learn?concept=${concept.id}`}
-              className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 hover:border-emerald-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group flex flex-col justify-between shadow-sm"
+              onClick={() => setSelectedConcept(concept)}
+              className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 hover:border-emerald-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group text-left flex flex-col justify-between shadow-sm cursor-pointer"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-                    Step {idx + 1}
+                    Node {idx + 1}
                   </span>
-                  <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+                  <GitBranch className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
                   {concept.title}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  {concept.desc}
+                  {concept.shortDefinition}
                 </p>
               </div>
-              <div className="mt-3 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                <span>Learn concept</span>
-                <span>→</span>
+
+              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">
+                  {concept.prerequisites && concept.prerequisites.length > 0
+                    ? `${concept.prerequisites.length} prerequisite${concept.prerequisites.length > 1 ? 's' : ''}`
+                    : 'Foundational node'}
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:translate-x-0.5 transition-transform">
+                  Inspect Pathway →
+                </span>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* 7-PART STRUCTURED EVENT BREAKDOWN */}
+      {/* Concept Detail Modal */}
+      {selectedConcept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-emerald-500" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedConcept.title}</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedConcept(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Definition</span>
+                <p className="text-slate-800 dark:text-slate-200 mt-0.5">{selectedConcept.shortDefinition}</p>
+              </div>
+
+              {selectedConcept.whyItMatters && (
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Why It Matters</span>
+                  <p className="text-slate-800 dark:text-slate-200 mt-0.5">{selectedConcept.whyItMatters}</p>
+                </div>
+              )}
+
+              <div>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Prerequisite Knowledge Dependencies</span>
+                {selectedConcept.prerequisites && selectedConcept.prerequisites.length > 0 ? (
+                  <ul className="mt-1 space-y-1">
+                    {selectedConcept.prerequisites.map((p, i) => (
+                      <li key={i} className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>{p.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">This is a primary foundational root concept with no prior prerequisites required.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setSelectedConcept(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all"
+              >
+                Close Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. FEATURE: Grounded 5W1H Structured Breakdown */}
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Layers className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          <span>Complete Event Breakdown</span>
+          <span>Grounded 5W1H Understanding Breakdown</span>
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -337,7 +551,7 @@ export const EventDetailPage: React.FC = () => {
               <span>1. What Happened?</span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {eventData.breakdown.whatHappened}
+              {default5W1H.whatHappened}
             </p>
           </div>
 
@@ -348,7 +562,7 @@ export const EventDetailPage: React.FC = () => {
               <span>2. Why Did It Happen?</span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {eventData.breakdown.whyDidItHappen}
+              {default5W1H.whyDidItHappen}
             </p>
           </div>
 
@@ -359,18 +573,18 @@ export const EventDetailPage: React.FC = () => {
               <span>3. Why Does It Matter?</span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-              {eventData.breakdown.whyDoesItMatter}
+              {default5W1H.whyDoesItMatter}
             </p>
           </div>
 
-          {/* 4. Background */}
+          {/* 4. Background Context */}
           <div className="glass-panel p-5 rounded-xl border border-slate-200 dark:border-white/10 space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
               <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
               <span>4. Background Context</span>
             </h3>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {eventData.breakdown.background}
+              {default5W1H.background}
             </p>
           </div>
 
@@ -386,7 +600,7 @@ export const EventDetailPage: React.FC = () => {
               <span>5. Who Is Affected?</span>
             </h3>
             <ul className="space-y-2">
-              {eventData.breakdown.whoIsAffected.map((item, idx) => (
+              {default5W1H.whoIsAffected.map((item, idx) => (
                 <li key={idx} className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
                   <span>{item}</span>
@@ -402,7 +616,7 @@ export const EventDetailPage: React.FC = () => {
               <span>6. What Could Happen Next? (Projections)</span>
             </h3>
             <ul className="space-y-2">
-              {eventData.breakdown.whatCouldHappenNext.map((item, idx) => (
+              {default5W1H.whatCouldHappenNext.map((item, idx) => (
                 <li key={idx} className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mt-2 shrink-0" />
                   <span>{item}</span>
@@ -414,29 +628,44 @@ export const EventDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* FEATURE 5: AI UNDERSTANDING QUIZ */}
+      {/* 6. FEATURE: Active Recall Understanding Quiz */}
       <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-brand-200 dark:border-brand-500/30 shadow-sm dark:shadow-glass space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-200 dark:border-white/10">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-1">
               <HelpCircle className="h-4 w-4" />
-              <span>Test Your Understanding</span>
+              <span>Phase 6 Active Recall Engine</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Event Comprehension Quiz (3 Questions)</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Questions test comprehension rather than simple memorization.</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Event Comprehension Quiz (Exactly 3 Questions)
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Evaluates conceptual comprehension with server-side validation.
+            </p>
           </div>
 
-          {showResults && (
-            <div className="px-4 py-2 rounded-xl bg-brand-50 border border-brand-300 text-brand-800 dark:bg-brand-600/20 dark:border-brand-500 dark:text-brand-300 text-sm font-bold self-start sm:self-auto">
-              Score: {calculateScore()} / {eventData.quiz.length} Correct
+          {quizResult && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <div className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border ${
+                quizResult.masteryStatus === 'STRONG'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-500/40 dark:text-emerald-300'
+                  : quizResult.masteryStatus === 'DEVELOPING'
+                  ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300'
+                  : 'bg-blue-50 border-blue-300 text-blue-800 dark:bg-blue-950/40 dark:border-blue-500/40 dark:text-blue-300'
+              }`}>
+                <Award className="h-4 w-4" />
+                <span>Score: {quizResult.correctCount} / {quizResult.totalQuestions} ({quizResult.scorePercentage}%) • {quizResult.masteryStatus}</span>
+              </div>
             </div>
           )}
         </div>
 
         {/* Question Cards */}
         <div className="space-y-6">
-          {eventData.quiz.map((q, qIndex) => {
-            const isCorrect = selectedAnswers[qIndex] === q.correctIndex;
+          {displayQuiz.map((q, qIndex) => {
+            const resultItem = quizResult?.results?.find(r => String(r.questionId) === String(q.id) || r.questionId === qIndex + 1);
+            const isCorrect = resultItem?.isCorrect;
+            const selectedOpt = selectedAnswers[q.id] ?? selectedAnswers[qIndex + 1];
 
             return (
               <div key={q.id} className="p-5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 shadow-sm space-y-3">
@@ -452,11 +681,11 @@ export const EventDetailPage: React.FC = () => {
                 {/* Options */}
                 <div className="space-y-2 pt-2">
                   {q.options.map((opt, optIdx) => {
-                    const isSelected = selectedAnswers[qIndex] === optIdx;
+                    const isSelected = selectedOpt === optIdx;
                     let optionStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-brand-500/50 hover:bg-slate-100 dark:bg-slate-950/80 dark:border-white/10 dark:text-slate-300 dark:hover:text-white';
 
-                    if (showResults) {
-                      if (optIdx === q.correctIndex) {
+                    if (quizResult && resultItem) {
+                      if (optIdx === resultItem.correctAnswer) {
                         optionStyle = 'bg-emerald-50 border-emerald-400 text-emerald-900 dark:bg-emerald-500/15 dark:border-emerald-500 dark:text-emerald-200 font-semibold';
                       } else if (isSelected) {
                         optionStyle = 'bg-rose-50 border-rose-400 text-rose-900 dark:bg-rose-500/15 dark:border-rose-500 dark:text-rose-200';
@@ -470,15 +699,15 @@ export const EventDetailPage: React.FC = () => {
                     return (
                       <button
                         key={optIdx}
-                        onClick={() => handleSelectAnswer(qIndex, optIdx)}
-                        disabled={showResults}
+                        onClick={() => handleSelectAnswer(q.id, optIdx)}
+                        disabled={quizResult !== null || isSubmittingQuiz}
                         className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm flex items-center justify-between gap-3 transition-all ${optionStyle}`}
                       >
                         <span>{opt}</span>
-                        {showResults && optIdx === q.correctIndex && (
+                        {quizResult && resultItem && optIdx === resultItem.correctAnswer && (
                           <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         )}
-                        {showResults && isSelected && optIdx !== q.correctIndex && (
+                        {quizResult && resultItem && isSelected && !isCorrect && (
                           <X className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
                         )}
                       </button>
@@ -487,13 +716,13 @@ export const EventDetailPage: React.FC = () => {
                 </div>
 
                 {/* Explanation on reveal */}
-                {showResults && (
+                {quizResult && resultItem && (
                   <div className={`mt-3 p-3 rounded-xl text-xs leading-relaxed border ${
                     isCorrect 
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-200' 
                       : 'bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/40 dark:border-rose-500/30 dark:text-rose-200'
                   }`}>
-                    <strong>Explanation: </strong> {q.explanation}
+                    <strong>Explanation: </strong> {resultItem.explanation}
                   </div>
                 )}
               </div>
@@ -501,29 +730,34 @@ export const EventDetailPage: React.FC = () => {
           })}
         </div>
 
-        {/* Quiz Controls */}
+        {/* Quiz Submission & Controls */}
         <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            {Object.keys(selectedAnswers).length} of {eventData.quiz.length} answered
+            {Object.keys(selectedAnswers).length} of {displayQuiz.length} answered
           </span>
 
-          {!showResults ? (
+          {!quizResult ? (
             <button
-              onClick={() => setShowResults(true)}
-              disabled={Object.keys(selectedAnswers).length === 0}
-              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-md shadow-brand-500/25 transition-all"
+              onClick={handleSubmitQuiz}
+              disabled={Object.keys(selectedAnswers).length === 0 || isSubmittingQuiz}
+              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-md shadow-brand-500/25 transition-all flex items-center gap-2"
             >
-              Submit Quiz & Check Score
+              {isSubmittingQuiz ? (
+                <>
+                  <RotateCw className="h-4 w-4 animate-spin" />
+                  <span>Evaluating Answers on Server...</span>
+                </>
+              ) : (
+                <span>Submit Quiz & Evaluate Mastery</span>
+              )}
             </button>
           ) : (
             <button
-              onClick={() => {
-                setShowResults(false);
-                setSelectedAnswers({});
-              }}
-              className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold border border-slate-200 dark:border-slate-700 transition-all"
+              onClick={handleRetakeQuiz}
+              className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 text-sm font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2"
             >
-              Retake Quiz
+              <RefreshCw className="h-4 w-4" />
+              <span>Retake Quiz</span>
             </button>
           )}
         </div>

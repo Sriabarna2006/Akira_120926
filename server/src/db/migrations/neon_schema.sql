@@ -234,13 +234,35 @@ CREATE TABLE IF NOT EXISTS public.quiz_attempts (
 );
 
 -- ------------------------------------------------------------------------------
--- 15. INDEXES
+-- 15. TREND OBSERVATIONS (Historical Observation Snapshots for Velocity)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.trend_observations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+    observed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    article_count INT NOT NULL DEFAULT 1,
+    independent_source_count INT NOT NULL DEFAULT 1,
+    trend_score INT NOT NULL CHECK (trend_score BETWEEN 0 AND 100),
+    importance_score INT NOT NULL CHECK (importance_score BETWEEN 0 AND 100),
+    velocity_score INT NOT NULL CHECK (velocity_score BETWEEN 0 AND 100),
+    coverage_score INT NOT NULL CHECK (coverage_score BETWEEN 0 AND 100),
+    recency_score INT NOT NULL CHECK (recency_score BETWEEN 0 AND 100),
+    freshness_score INT NOT NULL CHECK (freshness_score BETWEEN 0 AND 100),
+    spread_score INT NOT NULL CHECK (spread_score BETWEEN 0 AND 100),
+    final_rank_score INT NOT NULL CHECK (final_rank_score BETWEEN 0 AND 100)
+);
+
+-- ------------------------------------------------------------------------------
+-- 16. INDEXES
 -- ------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_canonical_events_rank ON public.canonical_events(final_rank_score DESC);
 CREATE INDEX IF NOT EXISTS idx_canonical_events_region ON public.canonical_events(region_id);
 CREATE INDEX IF NOT EXISTS idx_canonical_events_category ON public.canonical_events(category_id);
 CREATE INDEX IF NOT EXISTS idx_canonical_events_urgency ON public.canonical_events(urgency_label);
 CREATE INDEX IF NOT EXISTS idx_canonical_events_updated ON public.canonical_events(last_updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_trend_observations_event ON public.trend_observations(event_id, observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_trend_observations_time ON public.trend_observations(observed_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_event_sources_event_id ON public.event_sources(event_id);
 CREATE INDEX IF NOT EXISTS idx_event_sources_source_id ON public.event_sources(source_id);

@@ -1,5 +1,6 @@
 import { CanonicalEvent } from '../types/index.js';
 import { EventRepository, EventFilterParams } from '../repositories/event.repository.js';
+import { RankingService, RankOptions } from './ranking/rankingService.js';
 
 export class EventService {
   static async getEvents(params: EventFilterParams = {}): Promise<{ events: CanonicalEvent[]; total: number }> {
@@ -11,12 +12,14 @@ export class EventService {
     return EventRepository.findById(id.trim());
   }
 
-  static async getTopEvents(regionId?: string, limit = 10): Promise<CanonicalEvent[]> {
-    const res = await EventRepository.findAll({
-      regionId,
-      limit,
-      page: 1,
-    });
-    return res.events;
+  static async getTopEvents(options: RankOptions | string = {}, legacyLimit = 10): Promise<CanonicalEvent[]> {
+    if (typeof options === 'string') {
+      return RankingService.getTopRankedEvents({
+        regionId: options,
+        limit: legacyLimit,
+      });
+    }
+    return RankingService.getTopRankedEvents(options);
   }
 }
+

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { MobileBottomNav } from './MobileBottomNav';
+import { BreakingNewsTicker } from '../common/BreakingNewsTicker';
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -57,6 +58,9 @@ export const Layout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0B0F17] dark:text-slate-100 flex flex-col transition-colors">
       <Navbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
       
+      {/* Global Real-Time Breaking News Flash Bar */}
+      <BreakingNewsTicker />
+
       <div className="flex flex-1 relative">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
@@ -71,3 +75,4 @@ export const Layout: React.FC = () => {
     </div>
   );
 };
+

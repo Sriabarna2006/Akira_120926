@@ -8,6 +8,7 @@ import { validateArticle } from './ingestion/articleValidator.js';
 import { classifyArticle } from './ingestion/classifier.js';
 import { findMatchingCanonicalEvent } from './ingestion/eventMatcher.js';
 import { feedFetcher } from './ingestion/feedFetcher.js';
+import { RankingService } from './ranking/rankingService.js';
 
 export interface IngestionReport {
   sourcesAttempted: number;
@@ -285,14 +286,13 @@ export class NewsIngestionService {
   }
 
   /**
-   * Returns top 10 live events with fallback to database repository
+   * Returns top 10 live events using Phase 5 dynamic ranking & diversity engine
    */
   public async getTop10LiveEvents(regionFilter?: string): Promise<CanonicalEvent[]> {
-    const { events } = await EventRepository.findAll({
+    return RankingService.getTopRankedEvents({
       regionId: regionFilter,
       limit: 10,
     });
-    return events;
   }
 
   /**

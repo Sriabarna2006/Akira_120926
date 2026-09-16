@@ -7,10 +7,13 @@
     "dev": "tsx watch src/index.ts",
     "build": "npx tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js && node dist/tests/phase3.test.js && node dist/tests/phase4.test.js",
+    "test": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js && node dist/tests/phase3.test.js && node dist/tests/phase4.test.js && node dist/tests/phase5.test.js && node dist/tests/phase6.test.js && node dist/tests/phase7.test.js",
     "test:phase1": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js",
     "test:phase3": "npx tsc -p tsconfig.json && node dist/tests/phase3.test.js",
-    "test:phase4": "npx tsc -p tsconfig.json && node dist/tests/phase4.test.js"
+    "test:phase4": "npx tsc -p tsconfig.json && node dist/tests/phase4.test.js",
+    "test:phase5": "npx tsc -p tsconfig.json && node dist/tests/phase5.test.js",
+    "test:phase6": "npx tsc -p tsconfig.json && node dist/tests/phase6.test.js",
+    "test:phase7": "npx tsc -p tsconfig.json && node dist/tests/phase7.test.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

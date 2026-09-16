@@ -1,12 +1,52 @@
 export type RegionTier = 1 | 2 | 3;
 export type SourceTier = 1 | 2 | 3;
 export type UrgencyLabel = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
+export type TrendStatus = 'NORMAL' | 'RISING' | 'TRENDING' | 'HIGHLY_TRENDING';
+export type ImportanceStatus = 'LOW' | 'MODERATE' | 'IMPORTANT' | 'CRITICAL';
+export type FreshnessState = 'FRESH' | 'RECENT' | 'AGING' | 'STALE' | 'SOURCE_UNAVAILABLE';
+export type ConfidenceLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 export type LifecycleStatus = 
   | 'INITIAL_REPORT' 
   | 'NEW_DEVELOPMENT' 
   | 'OFFICIAL_CONFIRMATION' 
   | 'FOLLOW_UP' 
   | 'RESOLVED';
+
+export interface RankingMetadata {
+  trendScore: number;
+  importanceScore: number;
+  finalRankScore: number;
+  velocityScore: number;
+  coverageScore: number;
+  recencyScore: number;
+  freshnessScore: number;
+  spreadScore: number;
+  regionalRelevanceScore: number;
+  independentSourceCount: number;
+  trendStatus: TrendStatus;
+  importanceStatus: ImportanceStatus;
+  breakingStatus: boolean;
+  freshnessState: FreshnessState;
+  confidence: ConfidenceLevel;
+  explanation: string;
+}
+
+export interface TrendObservation {
+  id?: string;
+  eventId: string;
+  observedAt: string;
+  articleCount: number;
+  independentSourceCount: number;
+  trendScore: number;
+  importanceScore: number;
+  velocityScore: number;
+  coverageScore: number;
+  recencyScore: number;
+  freshnessScore: number;
+  spreadScore: number;
+  finalRankScore: number;
+}
 
 export interface Region {
   id: string;
@@ -75,6 +115,100 @@ export interface Article {
   sourceName?: string;
 }
 
+export type ExplanationLevel = 'verySimple' | 'beginner' | 'student' | 'technical' | 'deepDive';
+
+export interface FiveWOneH {
+  whatHappened: string;
+  whyDidItHappen: string;
+  whyDoesItMatter: string;
+  whoIsAffected: string[];
+  whatCouldHappenNext: string[];
+  background: string;
+}
+
+export interface MultiLevelExplanation {
+  verySimple: string;
+  beginner: string;
+  student: string;
+  technical: string;
+  deepDive: string;
+}
+
+export interface ExtractedConcept {
+  id: string;
+  title: string;
+  slug: string;
+  shortDefinition: string;
+  whyItMatters?: string;
+  category?: string;
+  prerequisites?: string[];
+}
+
+export interface QuizQuestion {
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface EventAISummaryRecord {
+  id: string;
+  eventId: string;
+  version: number;
+  provider: string;
+  model: string;
+  fiveWOneH: FiveWOneH;
+  status: 'COMPLETED' | 'FAILED' | 'PENDING';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventExplanationRecord {
+  id: string;
+  eventId: string;
+  level: ExplanationLevel;
+  content: string;
+  provider: string;
+  model: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventQuizRecord {
+  id: string;
+  eventId: string;
+  version: number;
+  questions: QuizQuestion[];
+  provider: string;
+  model: string;
+  createdAt: string;
+}
+
+export interface QuizSubmission {
+  eventId: string;
+  answers: Record<number | string, number>;
+}
+
+export interface QuizResult {
+  eventId: string;
+  totalQuestions: number;
+  correctCount: number;
+  scorePercentage: number;
+  masteryStatus: 'NEEDS_LEARNING' | 'DEVELOPING' | 'STRONG';
+  results: {
+    questionId: number;
+    question: string;
+    selectedAnswer: number;
+    correctAnswer: number;
+    isCorrect: boolean;
+    explanation: string;
+  }[];
+  timestamp: string;
+}
+
 export interface CanonicalEvent {
   id: string;
   title: string;
@@ -86,6 +220,7 @@ export interface CanonicalEvent {
   urgencyLabel: UrgencyLabel;
   importanceScore: number;
   velocityScore: number;
+  trendScore?: number;
   finalRankScore: number;
   whyItMatters?: string;
   firstPublishedAt: string;
@@ -93,10 +228,15 @@ export interface CanonicalEvent {
   sourceCount: number;
   lifecycleStatus: LifecycleStatus;
   metadata?: Record<string, unknown>;
+  rankingMetadata?: RankingMetadata;
   createdAt: string;
   sources?: EventSource[];
   articles?: Article[];
   relatedConcepts?: string[];
+  breakdown?: FiveWOneH;
+  explanations?: MultiLevelExplanation;
+  concepts?: ExtractedConcept[];
+  quiz?: QuizQuestion[];
 }
 
 export interface PaginationParams {
@@ -134,3 +274,129 @@ export interface ApiErrorResponse {
 }
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+// ============================================================================
+// PHASE 7: PERSONALIZATION, LEARNING PROGRESS & SPACED REPETITION TYPES
+// ============================================================================
+
+export type MasteryStatus = 'NEEDS_LEARNING' | 'DEVELOPING' | 'STRONG';
+export type ReviewStatus = 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+export type LearningActivityType = 
+  | 'EVENT_VIEWED'
+  | 'EXPLANATION_VIEWED'
+  | 'CONCEPT_VIEWED'
+  | 'QUIZ_STARTED'
+  | 'QUIZ_COMPLETED'
+  | 'EVENT_SAVED'
+  | 'REVIEW_COMPLETED';
+
+export interface UserLearningProgress {
+  id: string;
+  userId: string;
+  conceptId?: string;
+  eventId?: string;
+  masteryScore: number;
+  masteryStatus: MasteryStatus;
+  attemptCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  lastAttemptAt?: string;
+  lastMasteredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserReviewSchedule {
+  id: string;
+  userId: string;
+  conceptId?: string;
+  eventId?: string;
+  easeFactor: number;
+  intervalDays: number;
+  repetitionCount: number;
+  lastReviewedAt?: string;
+  nextReviewAt: string;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuizAttemptRecord {
+  id: string;
+  userId: string;
+  eventId: string;
+  conceptId?: string;
+  score: number;
+  totalQuestions: number;
+  accuracy: number;
+  scorePercentage: number;
+  masteryStatus: MasteryStatus;
+  answers: Record<string | number, number>;
+  submittedAt: string;
+}
+
+export interface LearningActivityRecord {
+  id: string;
+  userId: string;
+  activityType: LearningActivityType;
+  eventId?: string;
+  conceptId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface DueReviewItem {
+  id: string;
+  eventId?: string;
+  conceptId?: string;
+  title: string;
+  category: string;
+  masteryScore: number;
+  masteryStatus: MasteryStatus;
+  status: ReviewStatus;
+  intervalDays: number;
+  easeFactor: number;
+  repetitionCount: number;
+  lastReviewedAt?: string;
+  nextReviewAt: string;
+  isOverdue: boolean;
+  overdueHours: number;
+  recommendedExplanationLevel: ExplanationLevel;
+}
+
+export interface LearningRecommendation {
+  type: 'REVIEW_DUE' | 'WEAK_CONCEPT' | 'CONTINUE_LEARNING' | 'NEW_CONCEPT';
+  title: string;
+  reason: string;
+  eventId?: string;
+  conceptId?: string;
+  category?: string;
+  masteryScore?: number;
+  priority: number;
+}
+
+export interface LearningDashboardData {
+  overallMastery: number;
+  totalItemsTracked: number;
+  conceptsLearned: number;
+  conceptsDeveloping: number;
+  conceptsNeedingLearning: number;
+  dueReviewsCount: number;
+  completedReviewsCount: number;
+  currentStreak: number;
+  longestStreak: number;
+  categoryProgress: Record<string, number>;
+  recentActivity: QuizAttemptRecord[];
+  weakConcepts: DueReviewItem[];
+  isNewUser: boolean;
+}
+
+export interface QuizSubmissionLearningPayload {
+  progress: UserLearningProgress;
+  schedule: UserReviewSchedule;
+  attempt: QuizAttemptRecord;
+  currentStreak: number;
+  recommendedLevel: ExplanationLevel;
+}
+
+
