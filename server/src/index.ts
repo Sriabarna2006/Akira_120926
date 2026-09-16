@@ -24,11 +24,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Routes (supports both /api prefix in dev and stripped path in serverless)
 app.use('/api', apiRoutes);
+app.use('/', apiRoutes);
 
 // Centralized error handling
 app.use(errorHandler);
+
 
 // Start server if not running in a serverless environment
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {

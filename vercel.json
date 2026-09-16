@@ -33,8 +33,13 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/((?!api|assets|favicon.svg|manifest.json).*)",
       "destination": "/index.html"
     }
   ]
 }
+

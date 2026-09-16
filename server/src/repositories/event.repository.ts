@@ -182,8 +182,9 @@ export class EventRepository {
         LEFT JOIN public.regions r ON e.region_id = r.id
         LEFT JOIN public.categories c ON e.category_id = c.id
         ${whereClause}
-        ORDER BY e.final_rank_score DESC, e.last_updated_at DESC
+        ORDER BY e.first_published_at DESC, e.last_updated_at DESC, e.final_rank_score DESC
         LIMIT $${idx++} OFFSET $${idx++};
+
       `;
       const rows = await query<CanonicalEvent>(dataSql, [...values, limit, offset]);
 
@@ -259,7 +260,8 @@ export class EventRepository {
       }
     }
 
-    let filtered = [...inMemoryEvents];
+    let filtered = [...inMemoryEvents].sort((a, b) => new Date(b.firstPublishedAt || b.createdAt || 0).getTime() - new Date(a.firstPublishedAt || a.createdAt || 0).getTime());
+
     if (params.regionId && params.regionId.toUpperCase() !== 'ALL') {
       filtered = filtered.filter((e) => e.regionId?.toLowerCase() === params.regionId?.toLowerCase());
     }
