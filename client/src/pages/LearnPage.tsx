@@ -3,43 +3,62 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { 
   GraduationCap, 
   Flame, 
-  Clock,
   CheckCircle2, 
   Layers, 
   GitBranch, 
   ArrowRight, 
   Sparkles, 
   RotateCw, 
-  TrendingUp, 
   Target, 
-  Compass,
-  ChevronRight
+  Compass, 
+  ChevronRight, 
+  Sliders, 
+  BrainCircuit, 
+  Zap, 
+  CheckCircle, 
+  BarChart3, 
+  Lightbulb, 
+  RefreshCw 
 } from 'lucide-react';
 import { 
   Concept, 
   MultiLevelExplanation, 
   LearningDashboardData, 
   DueReviewItem, 
-  LearningRecommendation 
+  PersonalizedFeedItem, 
+  DailyLearningSummary, 
+  UserLearningPreferences, 
+  PreferredDifficulty 
 } from '../types';
-import { MasteryBadge } from '../components/ui/Badge';
+import { MasteryBadge, Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { learningService } from '../services/learningService';
+import { PersonalizedEventCard } from '../components/cards/PersonalizedEventCard';
 
 export const LearnPage: React.FC = () => {
   const { user, token, openAuthModal, devLogin } = useAuth();
   const [searchParams] = useSearchParams();
   const activeConceptSlug = searchParams.get('concept') || 'monetary-policy';
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'concepts'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'forYou' | 'spacedReview' | 'concepts'>('forYou');
   const [explanationLevel, setExplanationLevel] = useState<keyof MultiLevelExplanation>('student');
   const [selectedConceptSlug, setSelectedConceptSlug] = useState<string>(activeConceptSlug);
 
-  // Phase 7 Dashboard State
+  // Phase 8 & Phase 7 State
+  const [dailySummary, setDailySummary] = useState<DailyLearningSummary | null>(null);
+  const [personalizedFeed, setPersonalizedFeed] = useState<PersonalizedFeedItem[]>([]);
+  const [explorationItems, setExplorationItems] = useState<PersonalizedFeedItem[]>([]);
   const [dashboardData, setDashboardData] = useState<LearningDashboardData | null>(null);
   const [dueReviews, setDueReviews] = useState<DueReviewItem[]>([]);
-  const [recommendations, setRecommendations] = useState<LearningRecommendation[]>([]);
+  const [preferences, setPreferences] = useState<UserLearningPreferences | null>(null);
+  const [feedFilter, setFeedFilter] = useState<'ALL' | 'GAP' | 'REVIEW' | 'AFFINITY'>('ALL');
+  
+  // Preferences Modal State
+  const [showPrefModal, setShowPrefModal] = useState<boolean>(false);
+  const [prefDailyGoal, setPrefDailyGoal] = useState<number>(3);
+  const [prefDifficulty, setPrefDifficulty] = useState<PreferredDifficulty>('ADAPTIVE');
+  const [savingPrefs, setSavingPrefs] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const fetchLearningData = async () => {
@@ -49,15 +68,29 @@ export const LearnPage: React.FC = () => {
 
     try {
       setRefreshing(true);
-      const [prog, reviewsRes, recs] = await Promise.all([
+      const [summaryRes, feedRes, progRes, reviewsRes, prefsRes] = await Promise.all([
+        learningService.getDailySummary(),
+        learningService.getPersonalizedFeed({ limit: 12 }),
         learningService.getProgress(),
         learningService.getDueReviews(20),
-        learningService.getRecommendations(6),
+        learningService.getPreferences(),
       ]);
 
-      if (prog) setDashboardData(prog);
+      if (summaryRes) setDailySummary(summaryRes);
+      if (progRes) setDashboardData(progRes);
       if (reviewsRes?.items) setDueReviews(reviewsRes.items);
-      if (recs) setRecommendations(recs);
+      if (prefsRes) {
+        setPreferences(prefsRes);
+        setPrefDailyGoal(prefsRes.dailyGoal);
+        setPrefDifficulty(prefsRes.preferredDifficulty);
+      }
+
+      if (feedRes?.items) {
+        const regular = feedRes.items.filter((i) => !i.context.isExplorationSlot);
+        const explore = feedRes.items.filter((i) => i.context.isExplorationSlot);
+        setPersonalizedFeed(regular.length > 0 ? regular : feedRes.items);
+        setExplorationItems(explore);
+      }
     } catch (err) {
       console.warn('[LearnPage] Failed to fetch learning data:', err);
     } finally {
@@ -68,6 +101,34 @@ export const LearnPage: React.FC = () => {
   useEffect(() => {
     fetchLearningData();
   }, [user, token]);
+
+  const handleSavePreferences = async () => {
+    try {
+      setSavingPrefs(true);
+      const updated = await learningService.updatePreferences({
+        dailyGoal: prefDailyGoal,
+        preferredDifficulty: prefDifficulty,
+      });
+      if (updated) {
+        setPreferences(updated);
+        setShowPrefModal(false);
+        await fetchLearningData();
+      }
+    } catch (err) {
+      console.warn('[LearnPage] Failed to save preferences:', err);
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  // Filter personalized feed
+  const filteredFeed = personalizedFeed.filter((item) => {
+    if (feedFilter === 'ALL') return true;
+    if (feedFilter === 'GAP') return item.reasonCode === 'WEAK_CONCEPT' || item.reasonCode === 'KNOWLEDGE_GAP';
+    if (feedFilter === 'REVIEW') return item.reasonCode === 'REVIEW_DUE';
+    if (feedFilter === 'AFFINITY') return item.reasonCode === 'CATEGORY_AFFINITY';
+    return true;
+  });
 
   // Concept Library Data
   const concepts: Concept[] = [
@@ -152,7 +213,7 @@ export const LearnPage: React.FC = () => {
   const currentConcept = concepts.find((c) => c.slug === selectedConceptSlug || c.id === selectedConceptSlug) || concepts[0];
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12">
+    <div className="space-y-8 animate-fadeIn pb-16">
       
       {/* 1. Header Banner */}
       <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900/40 via-slate-900 to-indigo-950/60 border border-purple-500/30 shadow-glass backdrop-blur-xl relative overflow-hidden">
@@ -161,52 +222,80 @@ export const LearnPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest mb-2">
               <GraduationCap className="w-4 h-4 text-purple-400" />
-              <span>AKIRA Learning & Spaced Repetition Engine</span>
+              <span>AKIRA Adaptive Learning & Personalized Intelligence</span>
             </div>
             <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Personalized Real-World Learning
+              Intelligent Daily Learning
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed mt-2">
-              Transform news events into durable long-term knowledge. AKIRA tracks what you understand, identifies weak concepts, and schedules active recall reviews.
+              Continuous learning grounded in real news. AKIRA tracks what you understand, targets knowledge gaps, and serves explainable, personalized recommendations.
             </p>
           </div>
 
-          {/* Quick Streak & Mastery Badge */}
+          {/* Quick Stats Pill */}
           {user && (
-            <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-700/80 p-3.5 rounded-2xl shrink-0 backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-3 bg-slate-900/80 border border-slate-700/80 p-3.5 rounded-2xl shrink-0 backdrop-blur-md">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center">
                 <Flame className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <div className="text-xs text-slate-400 font-medium">Active Streak</div>
-                <div className="text-xl font-black text-white flex items-baseline gap-1">
-                  <span>{dashboardData?.currentStreak || 0}</span>
+                <div className="text-xs text-slate-400 font-medium">Daily Goal</div>
+                <div className="text-lg font-black text-white flex items-baseline gap-1">
+                  <span>{dailySummary?.activitiesCompletedToday || 0}</span>
+                  <span className="text-xs text-slate-400 font-normal">/ {dailySummary?.dailyGoal || preferences?.dailyGoal || 3}</span>
+                </div>
+              </div>
+              <div className="h-8 w-px bg-slate-700 mx-1" />
+              <div>
+                <div className="text-xs text-slate-400 font-medium">Streak</div>
+                <div className="text-lg font-black text-amber-400 flex items-baseline gap-1">
+                  <span>{dailySummary?.currentStreak ?? dashboardData?.currentStreak ?? 0}</span>
                   <span className="text-xs text-slate-400 font-normal">days</span>
                 </div>
               </div>
-              <div className="h-8 w-px bg-slate-700 mx-2" />
-              <div>
-                <div className="text-xs text-slate-400 font-medium">Mastery</div>
-                <div className="text-xl font-black text-purple-400">
-                  {dashboardData?.overallMastery || 0}%
-                </div>
-              </div>
+              <div className="h-8 w-px bg-slate-700 mx-1" />
+              <button
+                onClick={fetchLearningData}
+                disabled={refreshing}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                title="Refresh Recommendations"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowPrefModal(true)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                title="Learning Settings & Daily Goal"
+              >
+                <Sliders className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-800">
+        <div className="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-slate-800">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => setActiveTab('forYou')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'dashboard'
+              activeTab === 'forYou'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>For You (Personalized Feed)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('spacedReview')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'spacedReview'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Target className="w-4 h-4" />
-            <span>My Learning Profile</span>
+            <span>Spaced Reviews ({dueReviews.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('concepts')}
@@ -217,293 +306,431 @@ export const LearnPage: React.FC = () => {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Knowledge Concept Library</span>
+            <span>Concept Knowledge Graph</span>
           </button>
         </div>
       </div>
 
-      {/* 2. TAB CONTENT */}
-      {activeTab === 'dashboard' ? (
+      {/* Guest / Unauthenticated Notice */}
+      {!user && (
+        <div className="p-6 rounded-3xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-400">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Sign In for Personalized Adaptive Learning</h3>
+              <p className="text-sm text-slate-400">
+                Sign in to customize daily goals, track weak concepts, and receive deterministic recommendations tailored to your behavior.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="primary" onClick={openAuthModal}>
+              Sign In / Register
+            </Button>
+            <Button variant="outline" onClick={() => devLogin('user')}>
+              Demo Mode
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. TAB 1: FOR YOU (PERSONALIZED DAILY FEED & GOAL PROGRESS) */}
+      {activeTab === 'forYou' && (
         <div className="space-y-8">
           
-          {/* Guest / Unauthenticated Notice */}
-          {!user && (
-            <div className="p-6 rounded-3xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-400">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Sign In to Track Your Personal Learning Profile</h3>
-                  <p className="text-sm text-slate-400">
-                    Sign in to track active streaks, record quiz scores, and receive automated SM-2 spaced repetition review schedules.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button variant="primary" onClick={openAuthModal}>
-                  Sign In / Create Account
-                </Button>
-                <Button variant="outline" onClick={() => devLogin('user')}>
-                  Demo Mode
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* New User Honest Empty State */}
-          {user && dashboardData?.isNewUser && (
-            <div className="p-8 rounded-3xl bg-gradient-to-br from-slate-900/90 via-purple-950/20 to-slate-900/90 border border-purple-500/30 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto">
-                <Compass className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Your Learning Journey Starts Here</h2>
-              <p className="text-slate-300 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-                You haven’t completed any active recall quizzes yet. Explore current real-world news events, read the grounded explanations, and test your understanding to activate your personalized spaced repetition schedule.
-              </p>
-              <div className="pt-2 flex justify-center gap-3">
-                <Link to="/">
-                  <Button variant="primary" className="gap-2">
-                    <Compass className="w-4 h-4" />
-                    <span>Explore Top Ranked Events</span>
-                  </Button>
-                </Link>
-                <Link to="/explore">
-                  <Button variant="outline" className="gap-2">
-                    <Layers className="w-4 h-4" />
-                    <span>Browse Knowledge Domains</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* Progress Overview Grid (When User Has Data) */}
-          {user && !dashboardData?.isNewUser && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Today's Goal Progress & Recommended Next Action Widget */}
+          {dailySummary && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Card 1: Overall Mastery */}
-              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-purple-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-                  <span>Overall Mastery</span>
-                  <Target className="w-4 h-4 text-purple-400" />
-                </div>
-                <div className="my-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{dashboardData?.overallMastery || 0}%</span>
-                  <span className="text-xs font-medium text-slate-400">
-                    {dashboardData?.overallMastery && dashboardData.overallMastery >= 80 ? 'Strong' : dashboardData?.overallMastery && dashboardData.overallMastery >= 50 ? 'Developing' : 'Building'}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500" 
-                    style={{ width: `${dashboardData?.overallMastery || 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Card 2: Spaced Repetition Due Queue */}
-              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-amber-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-                  <span>Due Today Reviews</span>
-                  <Clock className="w-4 h-4 text-amber-400" />
-                </div>
-                <div className="my-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-amber-400">{dashboardData?.dueReviewsCount || 0}</span>
-                  <span className="text-xs text-slate-400">items ready</span>
-                </div>
-                <div className="text-xs text-slate-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{dashboardData?.completedReviewsCount || 0} reviews completed</span>
-                </div>
-              </div>
-
-              {/* Card 3: Active Streak */}
-              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-orange-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-                  <span>Learning Streak</span>
-                  <Flame className="w-4 h-4 text-orange-400" />
-                </div>
-                <div className="my-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-orange-400">{dashboardData?.currentStreak || 0}</span>
-                  <span className="text-xs text-slate-400">consecutive days</span>
-                </div>
-                <div className="text-xs text-slate-400">
-                  <span>Best streak: </span>
-                  <strong className="text-slate-200">{dashboardData?.longestStreak || 0} days</strong>
-                </div>
-              </div>
-
-              {/* Card 4: Knowledge Mastery Breakdown */}
-              <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 transition-all backdrop-blur-md flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-                  <span>Concepts Mastered</span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div className="my-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-emerald-400">{dashboardData?.conceptsLearned || 0}</span>
-                  <span className="text-xs text-slate-400">of {dashboardData?.totalItemsTracked || 0} tracked</span>
-                </div>
-                <div className="text-xs text-slate-400 flex items-center gap-2">
-                  <span className="text-yellow-400 font-semibold">{dashboardData?.conceptsDeveloping || 0} developing</span>
-                  <span>•</span>
-                  <span className="text-rose-400 font-semibold">{dashboardData?.conceptsNeedingLearning || 0} focus</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 3. DUE TODAY SPACED REPETITION QUEUE */}
-          {user && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-400" />
-                  <h2 className="text-xl font-extrabold text-white tracking-tight">Today’s Due Reviews (SM-2 Spaced Repetition)</h2>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
-                    {dueReviews.length}
-                  </span>
-                </div>
-                {refreshing && (
-                  <span className="text-xs text-slate-400 flex items-center gap-1 animate-spin">
-                    <RotateCw className="w-3.5 h-3.5" />
-                  </span>
-                )}
-              </div>
-
-              {dueReviews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {dueReviews.map((item) => (
-                    <div 
-                      key={item.id}
-                      className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 transition-all backdrop-blur-md flex flex-col justify-between space-y-4"
+              {/* Daily Goal Card */}
+              <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900/90 to-purple-950/40 border border-purple-500/20 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5" />
+                      Today's Learning Goal
+                    </span>
+                    <button
+                      onClick={() => setShowPrefModal(true)}
+                      className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md">
-                            {item.category}
-                          </span>
-                          <MasteryBadge status={item.masteryStatus} />
-                        </div>
-                        <h3 className="text-base font-bold text-white leading-snug line-clamp-2">
-                          {item.title}
-                        </h3>
-                      </div>
-
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                        <div className="flex items-center gap-3">
-                          <span>Interval: <strong className="text-slate-200">{item.intervalDays}d</strong></span>
-                          <span>Reps: <strong className="text-slate-200">{item.repetitionCount}</strong></span>
-                        </div>
-                        <Link to={item.eventId ? `/event/${item.eventId}` : `/learn?concept=${item.conceptId}`}>
-                          <Button size="sm" variant="primary" className="gap-1.5 text-xs py-1 px-3">
-                            <span>Review Now</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-2">
-                  <div className="text-emerald-400 font-bold flex items-center justify-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>All Caught Up! No Reviews Due Right Now</span>
+                      <Sliders className="w-3 h-3" />
+                      Edit Goal
+                    </button>
                   </div>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Your scheduled memory reinforcements are on track. Continue discovering new events or explore the concept graph below.
+
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div className="text-2xl sm:text-3xl font-black text-white">
+                      {dailySummary.activitiesCompletedToday} of {dailySummary.dailyGoal}
+                      <span className="text-xs text-slate-400 font-normal ml-2">activities</span>
+                    </div>
+                    <span className="text-sm font-bold text-purple-400">
+                      {dailySummary.dailyGoalProgressPercentage}%
+                    </span>
+                  </div>
+
+                  {/* Goal Progress Bar */}
+                  <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden mb-3">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        dailySummary.isDailyGoalAchieved
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm'
+                          : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                      }`}
+                      style={{ width: `${Math.min(100, dailySummary.dailyGoalProgressPercentage)}%` }}
+                    />
+                  </div>
+
+                  {dailySummary.isDailyGoalAchieved ? (
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <span>Daily Goal Complete! Fantastic momentum.</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400">
+                      {dailySummary.dailyGoal - dailySummary.activitiesCompletedToday} more learning activities to hit your target today.
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-4 mt-4 border-t border-slate-800 text-center text-xs">
+                  <div className="p-2 rounded-xl bg-slate-800/40">
+                    <div className="text-slate-400 text-[10px]">Quizzes</div>
+                    <div className="font-bold text-white">{dailySummary.quizzesCompletedToday}</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-800/40">
+                    <div className="text-slate-400 text-[10px]">Mastered</div>
+                    <div className="font-bold text-emerald-400">{dailySummary.conceptsMasteredToday}</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-800/40">
+                    <div className="text-slate-400 text-[10px]">Due Reviews</div>
+                    <div className="font-bold text-amber-400">{dailySummary.reviewsDueToday}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommended Next Action Banner */}
+              <div className="lg:col-span-2 p-6 rounded-3xl bg-gradient-to-br from-indigo-950/40 via-slate-900/90 to-cyan-950/30 border border-indigo-500/30 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5" />
+                      Highest-Priority Next Action
+                    </span>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-semibold">
+                      {dailySummary.recommendedNextAction?.actionType || 'LEARN'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
+                    {dailySummary.recommendedNextAction?.title || 'Explore Fresh Corroborated Intelligence'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                    {dailySummary.recommendedNextAction?.reason || 'AKIRA recommends exploring new verified events to expand your real-world knowledge graph.'}
                   </p>
                 </div>
-              )}
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <BrainCircuit className="w-4 h-4 text-purple-400" />
+                    <span>Preferred Level: <strong className="text-slate-200">{preferences?.preferredDifficulty || 'Adaptive'}</strong></span>
+                  </div>
+
+                  {dailySummary.recommendedNextAction?.eventId ? (
+                    <Link
+                      to={`/event/${dailySummary.recommendedNextAction.eventId}${dailySummary.recommendedNextAction.actionType === 'REVIEW' ? '#quiz' : ''}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 transition-colors shadow-sm"
+                    >
+                      <span>Take Action Now</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => setActiveTab('concepts')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-sm"
+                    >
+                      <span>Browse Concepts</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* 4. RECOMMENDATIONS & WEAK CONCEPTS SECTION */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Left 2 Cols: Personalized Next Steps */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-400" />
-                <h2 className="text-lg font-bold text-white tracking-tight">Recommended Next Steps</h2>
+          {/* Spaced Review Due Shelf (If items are due today) */}
+          {dueReviews.length > 0 && (
+            <div className="p-6 rounded-3xl bg-amber-950/20 border border-amber-500/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                    <RotateCw className="w-5 h-5 animate-spin-slow" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Active Recall Reviews Due Today</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                        {dueReviews.length} Due
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Automated SuperMemo SM-2 spaced repetition intervals to ensure durable long-term retention.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('spacedReview')}
+                  className="text-xs text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                >
+                  <span>View All</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              <div className="space-y-3">
-                {recommendations.length > 0 ? (
-                  recommendations.map((rec, i) => (
-                    <div 
-                      key={i}
-                      className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all flex items-start justify-between gap-4"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                            rec.type === 'REVIEW_DUE' ? 'bg-amber-500/20 text-amber-300' :
-                            rec.type === 'WEAK_CONCEPT' ? 'bg-rose-500/20 text-rose-300' :
-                            rec.type === 'CONTINUE_LEARNING' ? 'bg-indigo-500/20 text-indigo-300' :
-                            'bg-purple-500/20 text-purple-300'
-                          }`}>
-                            {rec.type.replace('_', ' ')}
-                          </span>
-                          {rec.category && <span className="text-xs text-slate-500">• {rec.category}</span>}
-                        </div>
-                        <h4 className="text-sm font-bold text-white">{rec.title}</h4>
-                        <p className="text-xs text-slate-400 leading-relaxed">{rec.reason}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dueReviews.slice(0, 3).map((review) => (
+                  <div
+                    key={review.id}
+                    className="p-4 rounded-2xl bg-slate-900/80 border border-amber-500/20 flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <Badge variant="concept">{review.category}</Badge>
+                        <span className="text-[11px] text-amber-400 font-bold">
+                          {review.isOverdue ? `${review.overdueHours}h overdue` : 'Due today'}
+                        </span>
                       </div>
-
-                      <Link to={rec.eventId ? `/event/${rec.eventId}` : `/learn?concept=${rec.conceptId || ''}`}>
-                        <Button size="sm" variant="outline" className="shrink-0 text-xs py-1 px-2.5 mt-1">
-                          <span>Action</span>
-                          <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                        </Button>
-                      </Link>
+                      <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug">
+                        {review.title}
+                      </h4>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">
-                    Explore top real-world news to receive personalized learning recommendations.
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                      <span className="text-[11px] text-slate-400">
+                        Repetition: #{review.repetitionCount + 1}
+                      </span>
+                      {review.eventId && (
+                        <Link
+                          to={`/event/${review.eventId}#quiz`}
+                          className="px-3 py-1 rounded-lg text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                        >
+                          Review Quiz
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                )}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Personalized "For You" Feed Section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-cyan-400" />
+                  <span>Personalized Discovery Feed</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                  Real canonical news scored with composite 6-factor deterministic personalization.
+                </p>
+              </div>
+
+              {/* Feed Filter Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-900 border border-slate-800">
+                <button
+                  onClick={() => setFeedFilter('ALL')}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                    feedFilter === 'ALL'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All ({personalizedFeed.length})
+                </button>
+                <button
+                  onClick={() => setFeedFilter('GAP')}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                    feedFilter === 'GAP'
+                      ? 'bg-rose-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Knowledge Gaps
+                </button>
+                <button
+                  onClick={() => setFeedFilter('REVIEW')}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                    feedFilter === 'REVIEW'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Due Reviews
+                </button>
+                <button
+                  onClick={() => setFeedFilter('AFFINITY')}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                    feedFilter === 'AFFINITY'
+                      ? 'bg-cyan-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Interest Matches
+                </button>
               </div>
             </div>
 
-            {/* Right Col: Category Mastery Distribution */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-lg font-bold text-white tracking-tight">Category Mastery</h2>
+            {/* Feed Grid */}
+            {filteredFeed.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {filteredFeed.map((item) => (
+                  <PersonalizedEventCard
+                    key={item.event.id}
+                    item={item}
+                  />
+                ))}
               </div>
-
-              <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-                {dashboardData?.categoryProgress && Object.keys(dashboardData.categoryProgress).length > 0 ? (
-                  Object.entries(dashboardData.categoryProgress).map(([catName, score]) => (
-                    <div key={catName} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-slate-300">{catName}</span>
-                        <span className="text-purple-400 font-bold">{score}%</span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div 
-                          className="bg-purple-500 h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-xs text-slate-500">
-                    No category mastery recorded yet. Complete quizzes to unlock domain analytics.
-                  </div>
-                )}
+            ) : (
+              <div className="p-12 text-center rounded-3xl bg-slate-900/50 border border-slate-800 text-slate-400">
+                <Lightbulb className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-sm">No items matching current filter.</p>
               </div>
-            </div>
-
+            )}
           </div>
 
+          {/* Discover Something New (Exploration Shelf - 15-25% Anti-Filter-Bubble) */}
+          {explorationItems.length > 0 && (
+            <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/30 via-slate-900/90 to-teal-950/20 border border-emerald-500/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                    <Compass className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Discover Something New</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                        Exploration Slot
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Curated topics outside your primary categories to prevent echo chambers and expand domain breadth.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {explorationItems.map((item) => (
+                  <PersonalizedEventCard
+                    key={`explore_${item.event.id}`}
+                    item={item}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
-      ) : (
-        /* 5. CONCEPT LIBRARY TAB */
+      )}
+
+      {/* 3. TAB 2: SPACED REVIEW & LEARNING PROGRESS */}
+      {activeTab === 'spacedReview' && (
+        <div className="space-y-8">
+          {/* Spaced Repetition Due List */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">Active Recall Review Queue</h2>
+                <p className="text-xs text-slate-400">Items scheduled via SuperMemo SM-2 interval expansion algorithm</p>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-purple-500/20 text-purple-300">
+                {dueReviews.length} Ready For Review
+              </span>
+            </div>
+
+            {dueReviews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dueReviews.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <Badge variant="concept">{item.category}</Badge>
+                        <span className={`text-xs font-bold ${item.isOverdue ? 'text-amber-400' : 'text-slate-400'}`}>
+                          {item.isOverdue ? `${item.overdueHours}h Overdue` : 'Due Now'}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-white mb-2">{item.title}</h3>
+                      <div className="flex items-center gap-3 text-xs text-slate-400">
+                        <span>Mastery: <strong className="text-purple-400">{item.masteryScore}%</strong></span>
+                        <span>•</span>
+                        <span>Interval: <strong className="text-slate-200">{item.intervalDays}d</strong></span>
+                        <span>•</span>
+                        <span>Reps: <strong className="text-slate-200">#{item.repetitionCount}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                      <span className="text-[11px] text-slate-400">
+                        Recommended: <strong className="text-slate-300 capitalize">{item.recommendedExplanationLevel}</strong>
+                      </span>
+                      {item.eventId && (
+                        <Link
+                          to={`/event/${item.eventId}#quiz`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 transition-colors"
+                        >
+                          <span>Review Quiz</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-3xl bg-slate-900/50 border border-slate-800 text-slate-400">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-base font-bold text-white">All Caught Up!</p>
+                <p className="text-xs text-slate-400 mt-1">No spaced repetition reviews are due right now. Explore new events to add concepts.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Category Mastery Breakdown */}
+          {dashboardData?.categoryProgress && Object.keys(dashboardData.categoryProgress).length > 0 && (
+            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-purple-400" />
+                <span>Domain Mastery Breakdown</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {Object.entries(dashboardData.categoryProgress).map(([cat, score]) => (
+                  <div key={cat} className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-slate-300 capitalize">{cat}</span>
+                      <span className="font-bold text-purple-400">{score}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
+                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${score}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. TAB 3: CONCEPT KNOWLEDGE GRAPH */}
+      {activeTab === 'concepts' && (
         <div className="space-y-8">
           
           {/* Concept Selector Pills */}
@@ -603,6 +830,89 @@ export const LearnPage: React.FC = () => {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* 5. PREFERENCES MODAL */}
+      {showPrefModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-purple-500/30 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-purple-400" />
+                <span>Learning Preferences</span>
+              </h3>
+              <button
+                onClick={() => setShowPrefModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Daily Goal Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                Daily Learning Goal (Activities / Day)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={prefDailyGoal}
+                  onChange={(e) => setPrefDailyGoal(Number(e.target.value))}
+                  className="flex-1 accent-purple-500"
+                />
+                <span className="text-base font-extrabold text-purple-400 w-12 text-center px-2 py-1 rounded-lg bg-slate-800">
+                  {prefDailyGoal}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Number of quizzes, explanations, or reviews you aim to complete daily.
+              </p>
+            </div>
+
+            {/* Preferred Difficulty */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                Default Comprehension Complexity
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { id: 'ADAPTIVE', label: 'Adaptive (Auto)' },
+                    { id: 'BEGINNER', label: 'Beginner' },
+                    { id: 'STUDENT', label: 'Student' },
+                    { id: 'TECHNICAL', label: 'Technical' },
+                    { id: 'DEEP_DIVE', label: 'Deep Dive' },
+                  ] as { id: PreferredDifficulty; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPrefDifficulty(opt.id)}
+                    className={`p-2.5 rounded-xl text-xs font-semibold border transition-all text-left ${
+                      prefDifficulty === opt.id
+                        ? 'bg-purple-600/20 border-purple-500 text-purple-300 font-bold'
+                        : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <Button variant="ghost" onClick={() => setShowPrefModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSavePreferences} disabled={savingPrefs}>
+                {savingPrefs ? 'Saving...' : 'Save Preferences'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

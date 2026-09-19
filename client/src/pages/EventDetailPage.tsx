@@ -19,16 +19,22 @@ import {
   Award, 
   GitBranch, 
   Info, 
-  RefreshCw 
+  RefreshCw,
+  ArrowRight,
+  AlertCircle,
+  ChevronRight
 } from 'lucide-react';
 import { eventService } from '../services/eventService';
+import { learningService } from '../services/learningService';
+import { knowledgeGraphService } from '../services/knowledgeGraphService';
 import { 
   CanonicalEvent, 
   FiveWOneH, 
   ExplanationLevel, 
   ExtractedConceptItem, 
   QuizQuestion, 
-  QuizResult 
+  QuizResult,
+  EventKnowledgeMap,
 } from '../types';
 
 export const EventDetailPage: React.FC = () => {
@@ -39,6 +45,7 @@ export const EventDetailPage: React.FC = () => {
   const [explanationsCache, setExplanationsCache] = useState<Partial<Record<ExplanationLevel, string>>>({});
   const [concepts, setConcepts] = useState<ExtractedConceptItem[]>([]);
   const [selectedConcept, setSelectedConcept] = useState<ExtractedConceptItem | null>(null);
+  const [knowledgeMap, setKnowledgeMap] = useState<EventKnowledgeMap | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string | number, number>>({});
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
@@ -48,20 +55,24 @@ export const EventDetailPage: React.FC = () => {
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Load canonical event and AI pillars
+  // Load canonical event, AI pillars, and Phase 9 Knowledge Map
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
     setLoading(true);
     setErrorMessage(null);
 
+    // Track activity in background
+    learningService.trackActivity('VIEW_EVENT', id);
+
     Promise.allSettled([
       eventService.getEventById(id),
       eventService.getUnderstanding(id),
       eventService.getConcepts(id),
       eventService.getQuiz(id),
-      eventService.getExplanation(id, 'all')
-    ]).then(([eventRes, understandingRes, conceptsRes, quizRes, explRes]) => {
+      eventService.getExplanation(id, 'all'),
+      knowledgeGraphService.getEventKnowledgeMap(id),
+    ]).then(([eventRes, understandingRes, conceptsRes, quizRes, explRes, mapRes]) => {
       if (!isMounted) return;
 
       if (eventRes.status === 'fulfilled' && eventRes.value) {
@@ -101,6 +112,13 @@ export const EventDetailPage: React.FC = () => {
 
       if (explRes.status === 'fulfilled' && explRes.value && typeof explRes.value === 'object') {
         setExplanationsCache(explRes.value as any);
+      }
+
+      if (mapRes.status === 'fulfilled' && mapRes.value) {
+        setKnowledgeMap(mapRes.value);
+        if (mapRes.value.keyConcepts && mapRes.value.keyConcepts.length > 0) {
+          setConcepts(mapRes.value.keyConcepts);
+        }
       }
     }).catch((err) => {
       if (isMounted) setErrorMessage(err.message || 'Failed to load intelligence layer');
@@ -371,6 +389,25 @@ export const EventDetailPage: React.FC = () => {
             </a>
           )}
         </div>
+
+        {/* Phase 8: Adaptive Intelligence & Personalization Context Banner */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900/90 to-indigo-950/40 border border-purple-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-purple-300">
+            <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+            <div>
+              <span className="font-bold text-white">Why You're Seeing This: </span>
+              <span className="text-slate-300">
+                Corroborated importance score {event?.importanceScore || 90}/100 • Matched to your continuous learning path • Quiz & spaced review enabled
+              </span>
+            </div>
+          </div>
+          <Link
+            to="/learn"
+            className="px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-semibold transition-colors shrink-0"
+          >
+            Learning Dashboard →
+          </Link>
+        </div>
       </div>
 
       {/* 3. FEATURE: 5-Level Adaptive AI Explainer */}
@@ -427,53 +464,176 @@ export const EventDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. FEATURE: Concept & Prerequisite Knowledge Graph */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-white/10 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Prerequisite Concepts & Knowledge Dependencies
+      {/* 4. PHASE 9 FEATURE: What You Need to Understand This & Knowledge Readiness */}
+      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/10 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/10">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-1">
+              <BookOpen className="h-4 w-4" />
+              <span>Phase 9 Knowledge Graph Intelligence</span>
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              What You Need to Understand This Event
             </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Key foundational concepts and your evidence-based mastery status.
+            </p>
           </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Knowledge Graph Nodes</span>
+
+          {knowledgeMap && (
+            <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-900/90 p-3 rounded-2xl border border-slate-200 dark:border-white/10 shrink-0">
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Comprehension Readiness</span>
+                <span className="text-base font-black text-purple-600 dark:text-purple-400">
+                  {knowledgeMap.userReadinessPercentage}% Ready
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Section 1: Concept Pills with Mastery Status */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {displayConcepts.map((concept, idx) => (
-            <button 
-              key={concept.id}
-              onClick={() => setSelectedConcept(concept)}
-              className="p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/5 hover:border-emerald-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group text-left flex flex-col justify-between shadow-sm cursor-pointer"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10 px-2 py-0.5 rounded">
-                    Node {idx + 1}
-                  </span>
-                  <GitBranch className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+          {(knowledgeMap?.keyConcepts || displayConcepts).map((concept: any, idx: number) => {
+            const mStatus = concept.masteryStatus || 'UNKNOWN';
+            return (
+              <div
+                key={concept.id}
+                className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 hover:border-purple-500/40 transition-all flex flex-col justify-between shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-500/10 px-2 py-0.5 rounded">
+                      Concept {idx + 1}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        mStatus === 'STRONG'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : mStatus === 'DEVELOPING'
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                          : mStatus === 'NEEDS_LEARNING'
+                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      }`}
+                    >
+                      {mStatus === 'STRONG' ? '✓ ' : mStatus === 'DEVELOPING' ? '⚠ ' : '✕ '}
+                      {mStatus.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {concept.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    {concept.shortDefinition}
+                  </p>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
-                  {concept.title}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  {concept.shortDefinition}
-                </p>
-              </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">
-                  {concept.prerequisites && concept.prerequisites.length > 0
-                    ? `${concept.prerequisites.length} prerequisite${concept.prerequisites.length > 1 ? 's' : ''}`
-                    : 'Foundational node'}
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:translate-x-0.5 transition-transform">
-                  Inspect Pathway →
-                </span>
+                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px]">
+                  <button
+                    onClick={() => setSelectedConcept(concept)}
+                    className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  >
+                    Quick Definition
+                  </button>
+                  <Link
+                    to={`/concept/${concept.id}`}
+                    className="text-purple-600 dark:text-purple-400 font-semibold hover:underline flex items-center gap-1"
+                  >
+                    <span>Inspect Graph</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Section 3: "Learn These First" (Knowledge Gaps Shelf) */}
+        {knowledgeMap && knowledgeMap.learnTheseFirst && knowledgeMap.learnTheseFirst.length > 0 && (
+          <div className="p-5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 space-y-3">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400 text-xs font-bold uppercase tracking-wider">
+              <AlertCircle className="w-4 h-4" />
+              <span>Learn These First (Foundational Knowledge Gaps)</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Mastering these prerequisites first ensures you understand the full real-world impact of this announcement.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {knowledgeMap.learnTheseFirst.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl bg-white dark:bg-slate-900/90 border border-amber-200 dark:border-amber-500/20 flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      {item.title}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                      {item.shortDefinition}
+                    </span>
+                  </div>
+                  <Link
+                    to={`/concept/${item.id}`}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 hover:bg-amber-200 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 shrink-0 transition-colors"
+                  >
+                    Study Node →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 4: Interactive Knowledge Graph Hierarchy */}
+        {knowledgeMap && knowledgeMap.prerequisiteTree && knowledgeMap.prerequisiteTree.length > 0 && (
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                <GitBranch className="w-4 h-4" />
+                <span>Knowledge Graph Dependency Chain</span>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                {knowledgeMap.prerequisiteTree.length} Concept Nodes • {knowledgeMap.edges.length} Dependencies
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {knowledgeMap.prerequisiteTree.map((node) => (
+                <div
+                  key={node.id}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 flex flex-col justify-between gap-1 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 dark:text-white">{node.title}</span>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                        node.masteryStatus === 'STRONG'
+                          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : node.masteryStatus === 'DEVELOPING'
+                          ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
+                          : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
+                      }`}
+                    >
+                      {node.masteryStatus}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                    {node.shortDefinition}
+                  </p>
+                  <Link
+                    to={`/concept/${node.id}`}
+                    className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold hover:underline pt-1 flex items-center gap-1"
+                  >
+                    <span>Inspect Tree Node</span>
+                    <ChevronRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Concept Detail Modal */}
@@ -482,7 +642,7 @@ export const EventDetailPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-emerald-500" />
+                <BookOpen className="h-5 w-5 text-purple-500" />
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedConcept.title}</h3>
               </div>
               <button 
@@ -511,19 +671,25 @@ export const EventDetailPage: React.FC = () => {
                 {selectedConcept.prerequisites && selectedConcept.prerequisites.length > 0 ? (
                   <ul className="mt-1 space-y-1">
                     {selectedConcept.prerequisites.map((p, i) => (
-                      <li key={i} className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <li key={i} className="flex items-center gap-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
+                        <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
                         <span>{p.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-slate-500 mt-1">This is a primary foundational root concept with no prior prerequisites required.</p>
+                  <p className="text-xs text-slate-500 mt-1">This is a foundational concept with no prior prerequisites required.</p>
                 )}
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-between items-center">
+              <Link
+                to={`/concept/${selectedConcept.id}`}
+                className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline"
+              >
+                Full Graph View →
+              </Link>
               <button
                 onClick={() => setSelectedConcept(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all"
@@ -762,6 +928,62 @@ export const EventDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 7. PHASE 9 FEATURE: Related Real-World Events (Cross-Topic Scored) */}
+      {knowledgeMap && knowledgeMap.relatedEvents && knowledgeMap.relatedEvents.length > 0 && (
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/10 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-indigo-500" />
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Related Real-World Intelligence Events
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Cross-topic corroborated news connected via shared concepts, domain affinity, and temporal alignment.
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">
+              Cross-Topic Intelligence
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {knowledgeMap.relatedEvents.map((item) => (
+              <Link
+                key={item.event.id}
+                to={`/event/${item.event.id}`}
+                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all group flex flex-col justify-between gap-3 shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                      {item.event.category || item.event.categoryId || 'General'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {item.score}% Match
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">
+                    {item.event.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    {item.reason}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <span>Explore Intelligence</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );

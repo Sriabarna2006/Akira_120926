@@ -4,6 +4,8 @@ import {
   UserReviewSchedule,
   QuizAttemptRecord,
   LearningActivityRecord,
+  UserLearningPreferences,
+  PreferredDifficulty,
   MasteryStatus,
   ReviewStatus,
   LearningActivityType,
@@ -15,6 +17,7 @@ const inMemoryProgress = new Map<string, UserLearningProgress>(); // key: `${use
 const inMemorySchedules = new Map<string, UserReviewSchedule>(); // key: `${userId}:${eventId || ''}:${conceptId || ''}`
 const inMemoryAttempts: QuizAttemptRecord[] = [];
 const inMemoryActivities: LearningActivityRecord[] = [];
+const inMemoryPreferences = new Map<string, UserLearningPreferences>(); // key: userId
 
 export class LearningRepository {
   private makeKey(userId: string, eventId?: string, conceptId?: string): string {
@@ -726,7 +729,109 @@ export class LearningRepository {
   }
 
   // ============================================================================
-  // 5. TEST & MAINTENANCE HELPERS
+  // 5. USER LEARNING PREFERENCES
+  // ============================================================================
+
+  public async getPreferences(userId: string): Promise<UserLearningPreferences> {
+    const now = new Date().toISOString();
+    const defaultPreferences: UserLearningPreferences = {
+      id: crypto.randomUUID(),
+      userId,
+      dailyGoal: 3,
+      preferredDifficulty: 'ADAPTIVE',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (isDatabaseConnected()) {
+      try {
+        const sql = `
+          SELECT 
+            id,
+            user_id as "userId",
+            daily_goal as "dailyGoal",
+            preferred_difficulty as "preferredDifficulty",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+          FROM public.user_learning_preferences
+          WHERE user_id = $1
+          LIMIT 1
+        `;
+        const row = await queryOne<any>(sql, [userId]);
+        if (row) {
+          return {
+            id: row.id,
+            userId: row.userId,
+            dailyGoal: Number(row.dailyGoal),
+            preferredDifficulty: row.preferredDifficulty as PreferredDifficulty,
+            createdAt: row.createdAt?.toISOString?.() || row.createdAt,
+            updatedAt: row.updatedAt?.toISOString?.() || row.updatedAt,
+          };
+        }
+      } catch (err: any) {
+        console.warn(`[LearningRepository] DB getPreferences failed, fallback to memory:`, err.message);
+      }
+    }
+
+    if (inMemoryPreferences.has(userId)) {
+      return inMemoryPreferences.get(userId)!;
+    }
+
+    inMemoryPreferences.set(userId, defaultPreferences);
+    return defaultPreferences;
+  }
+
+  public async savePreferences(
+    preferences: Partial<UserLearningPreferences> & { userId: string }
+  ): Promise<UserLearningPreferences> {
+    const now = new Date().toISOString();
+    const existing = await this.getPreferences(preferences.userId);
+
+    const record: UserLearningPreferences = {
+      id: existing.id || preferences.id || crypto.randomUUID(),
+      userId: preferences.userId,
+      dailyGoal: preferences.dailyGoal !== undefined ? Math.max(1, Math.min(20, preferences.dailyGoal)) : existing.dailyGoal,
+      preferredDifficulty: preferences.preferredDifficulty || existing.preferredDifficulty,
+      createdAt: existing.createdAt || now,
+      updatedAt: now,
+    };
+
+    if (isDatabaseConnected()) {
+      try {
+        const sql = `
+          INSERT INTO public.user_learning_preferences (
+            id, user_id, daily_goal, preferred_difficulty, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (user_id) DO UPDATE SET
+            daily_goal = EXCLUDED.daily_goal,
+            preferred_difficulty = EXCLUDED.preferred_difficulty,
+            updated_at = EXCLUDED.updated_at
+          RETURNING id, created_at as "createdAt", updated_at as "updatedAt"
+        `;
+        const res = await queryOne<any>(sql, [
+          record.id,
+          record.userId,
+          record.dailyGoal,
+          record.preferredDifficulty,
+          record.createdAt,
+          record.updatedAt,
+        ]);
+        if (res) {
+          record.id = res.id;
+          record.createdAt = res.createdAt?.toISOString?.() || record.createdAt;
+          record.updatedAt = res.updatedAt?.toISOString?.() || record.updatedAt;
+        }
+      } catch (err: any) {
+        console.warn(`[LearningRepository] DB savePreferences failed, saving to memory:`, err.message);
+      }
+    }
+
+    inMemoryPreferences.set(preferences.userId, record);
+    return record;
+  }
+
+  // ============================================================================
+  // 6. TEST & MAINTENANCE HELPERS
   // ============================================================================
 
   public clearInMemoryStores(): void {
@@ -734,6 +839,7 @@ export class LearningRepository {
     inMemorySchedules.clear();
     inMemoryAttempts.length = 0;
     inMemoryActivities.length = 0;
+    inMemoryPreferences.clear();
   }
 }
 

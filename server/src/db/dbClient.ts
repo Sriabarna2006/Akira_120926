@@ -16,7 +16,7 @@ if (isNeonConfigured && DATABASE_URL) {
       connectionString: DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: 10,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 1000,
       idleTimeoutMillis: 30000,
     });
 
@@ -137,6 +137,26 @@ if (isNeonConfigured && DATABASE_URL) {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS public.user_learning_preferences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        daily_goal INT NOT NULL DEFAULT 3,
+        preferred_difficulty VARCHAR(30) NOT NULL DEFAULT 'ADAPTIVE',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.concept_relations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        source_concept_id VARCHAR(100) NOT NULL,
+        target_concept_id VARCHAR(100) NOT NULL,
+        relation_type VARCHAR(50) NOT NULL DEFAULT 'RELATED',
+        weight FLOAT NOT NULL DEFAULT 1.0,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       INSERT INTO public.canonical_events (
         id, title, summary, region_id, category_id, urgency_label,
         importance_score, velocity_score, final_rank_score, why_it_matters,
@@ -157,17 +177,23 @@ if (isNeonConfigured && DATABASE_URL) {
   }
 }
 
+let lastPoolErrorTime = 0;
+const POOL_COOLOFF_MS = 15000;
+
 /**
  * Universal query runner for AKIRA data layer.
  * Attempts execution via PostgreSQL Pool -> Supabase Client -> In-Memory Fallback.
  */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  if (pool) {
+  if (pool && isDatabaseConnected()) {
     try {
       const res = await pool.query(text, params);
+      lastPoolErrorTime = 0;
       return res.rows as T[];
     } catch (err: any) {
-      // If table doesn't exist or query failed on remote DB, log and fallback if needed
+      if (err.message && (err.message.includes('timeout') || err.message.includes('ECONNREFUSED') || err.message.includes('ENOTFOUND'))) {
+        lastPoolErrorTime = Date.now();
+      }
       console.warn(`[DB Pool Query Error] ${err.message}`);
     }
   }
@@ -184,7 +210,11 @@ export async function queryOne<T = any>(text: string, params: any[] = []): Promi
 }
 
 export function isDatabaseConnected(): boolean {
-  return pool !== null;
+  if (!pool) return false;
+  if (lastPoolErrorTime > 0 && Date.now() - lastPoolErrorTime < POOL_COOLOFF_MS) {
+    return false;
+  }
+  return true;
 }
 
 export { pool };

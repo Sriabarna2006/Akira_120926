@@ -399,4 +399,234 @@ export interface QuizSubmissionLearningPayload {
   recommendedLevel: ExplanationLevel;
 }
 
+// ============================================================================
+// PHASE 8: INTELLIGENT DAILY LEARNING & ADAPTIVE PERSONALIZATION TYPES
+// ============================================================================
+
+export type RecommendationReasonCode =
+  | 'REVIEW_DUE'
+  | 'WEAK_CONCEPT'
+  | 'KNOWLEDGE_GAP'
+  | 'CATEGORY_AFFINITY'
+  | 'EXPLORATION'
+  | 'BREAKING_GLOBAL'
+  | 'CONTINUE_LEARNING';
+
+export type PreferredDifficulty = 'ADAPTIVE' | 'BEGINNER' | 'STUDENT' | 'TECHNICAL' | 'DEEP_DIVE';
+
+export interface UserLearningPreferences {
+  id: string;
+  userId: string;
+  dailyGoal: number;
+  preferredDifficulty: PreferredDifficulty;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecommendationScoreBreakdown {
+  globalNewsScore: number;
+  knowledgeGapScore: number;
+  reviewPriority: number;
+  categoryAffinity: number;
+  freshnessScore: number;
+  explorationScore: number;
+  rawCombinedScore: number;
+}
+
+export interface PersonalizedRecommendationContext {
+  reasonCode: RecommendationReasonCode;
+  reasonExplanation: string;
+  badgeLabel: string;
+  recommendedExplanationLevel: ExplanationLevel;
+  dominantSignal: string;
+  isExplorationSlot: boolean;
+  scoreBreakdown?: RecommendationScoreBreakdown;
+  relatedWeakConcepts?: string[];
+  reviewDueStatus?: {
+    isDue: boolean;
+    overdueHours: number;
+    repetitionCount: number;
+  };
+}
+
+export interface PersonalizedFeedItem {
+  event: CanonicalEvent;
+  personalizedScore: number;
+  recommendationReason: string;
+  reasonCode: RecommendationReasonCode;
+  badgeLabel: string;
+  recommendedExplanationLevel: ExplanationLevel;
+  context: PersonalizedRecommendationContext;
+}
+
+export interface PersonalizedFeedResult {
+  items: PersonalizedFeedItem[];
+  meta: {
+    totalEvaluated: number;
+    returnedCount: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+    explorationItemCount: number;
+    calculatedAt: string;
+  };
+}
+
+export interface DailyLearningSummary {
+  userId: string;
+  todayDateUtc: string;
+  reviewsDueToday: number;
+  reviewsCompletedToday: number;
+  quizzesCompletedToday: number;
+  conceptsMasteredToday: number;
+  conceptsDevelopingToday: number;
+  newTopicsDiscoveredToday: number;
+  activitiesCompletedToday: number;
+  dailyGoal: number;
+  dailyGoalProgressPercentage: number;
+  isDailyGoalAchieved: boolean;
+  overallMastery: number;
+  currentStreak: number;
+  longestStreak: number;
+  recommendedNextAction?: {
+    title: string;
+    reason: string;
+    actionType: 'REVIEW' | 'LEARN' | 'EXPLORE';
+    eventId?: string;
+    conceptId?: string;
+  };
+}
+
+export interface PersonalizationFeedOptions {
+  limit?: number;
+  page?: number;
+  regionId?: string;
+  categoryId?: string;
+  explorationRatio?: number; // default 0.20 (20%)
+  applyDiversity?: boolean;
+}
+
+// ============================================================================
+// PHASE 9: KNOWLEDGE GRAPH & CROSS-TOPIC INTELLIGENCE TYPES
+// ============================================================================
+
+export type ConceptRelationType =
+  | 'PREREQUISITE'
+  | 'RELATED'
+  | 'PART_OF'
+  | 'CAUSES'
+  | 'DEPENDS_ON'
+  | 'CONTRASTS_WITH';
+
+export type UserMasteryClassification = 'STRONG' | 'DEVELOPING' | 'NEEDS_LEARNING' | 'UNKNOWN';
+
+export interface ConceptRelation {
+  id: string;
+  sourceConceptId: string;
+  targetConceptId: string;
+  relationType: ConceptRelationType;
+  weight: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConceptGraphNode {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  shortDefinition: string;
+  whyItMatters?: string;
+  masteryStatus: UserMasteryClassification;
+  masteryScore: number;
+  isTarget?: boolean;
+  isPrerequisite?: boolean;
+  depth?: number;
+}
+
+export interface ConceptGraphEdge {
+  source: string;
+  target: string;
+  relationType: ConceptRelationType;
+  weight: number;
+}
+
+export interface ConceptLearningPathStep {
+  stepNumber: number;
+  conceptId: string;
+  title: string;
+  slug: string;
+  category: string;
+  shortDefinition: string;
+  masteryStatus: UserMasteryClassification;
+  masteryScore: number;
+  reason: string;
+  isPrerequisite: boolean;
+  isTarget: boolean;
+  actionType: 'LEARN' | 'REVIEW' | 'PASS';
+}
+
+export interface ConceptLearningPath {
+  targetConcept: ExtractedConcept;
+  totalSteps: number;
+  estimatedMinutes: number;
+  steps: ConceptLearningPathStep[];
+  userOverallReadiness: number;
+  hasMissingPrerequisites: boolean;
+}
+
+export interface RelatedConceptItem {
+  concept: ExtractedConcept;
+  score: number;
+  relationType?: ConceptRelationType;
+  sharedEventCount: number;
+  directRelationWeight: number;
+  graphDistance: number;
+  reason: string;
+}
+
+export interface RelatedEventItem {
+  event: CanonicalEvent;
+  score: number;
+  sharedConceptIds: string[];
+  relatedConceptIds: string[];
+  scoreBreakdown: {
+    sharedConceptScore: number;
+    relatedConceptScore: number;
+    categorySimilarity: number;
+    regionSimilarity: number;
+    temporalRelevance: number;
+    globalImportance: number;
+  };
+  reason: string;
+}
+
+export interface EventKnowledgeMap {
+  eventId: string;
+  eventTitle: string;
+  keyConcepts: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number })[];
+  prerequisiteTree: ConceptGraphNode[];
+  edges: ConceptGraphEdge[];
+  userReadinessPercentage: number;
+  knowledgeGaps: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number })[];
+  learnTheseFirst: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number; reason: string })[];
+  relatedConcepts: RelatedConceptItem[];
+  relatedEvents: RelatedEventItem[];
+}
+
+export interface ConceptKnowledgeStatus {
+  concept: ExtractedConcept;
+  masteryScore: number;
+  masteryStatus: UserMasteryClassification;
+  attemptCount: number;
+  correctCount: number;
+  lastAttemptAt?: string;
+  prerequisites: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number })[];
+  knowledgeGaps: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number })[];
+  isReadyForTarget: boolean;
+}
+
+
+
 

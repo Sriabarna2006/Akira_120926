@@ -14,6 +14,8 @@ import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
 import { EventController } from '../controllers/event.controller.js';
 import { LiveController } from '../controllers/live.controller.js';
 
+import conceptRoutes from './concept.routes.js';
+
 const router = Router();
 
 // Apply optional user authentication across all API routes
@@ -24,7 +26,7 @@ router.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'AKIRA Real-World Intelligence & Learning Assistant API',
-    version: 'Phase 7 (Personalization, Learning Progress & Spaced Repetition)',
+    version: 'Phase 9 (Knowledge Graph & Cross-Topic Intelligence)',
     timestamp: new Date().toISOString(),
   });
 });
@@ -39,7 +41,10 @@ router.use('/articles', articleRoutes);
 router.use('/events', eventRoutes);
 router.use('/live', liveRoutes);
 
-// 🧠 PHASE 7: PERSONALIZATION & LEARNING ENGINE ROUTES
+// 🧠 PHASE 9: KNOWLEDGE GRAPH & CONCEPT DOMAIN ROUTES
+router.use('/concepts', conceptRoutes);
+
+// 🧠 PHASE 7 & 8: PERSONALIZATION & LEARNING ENGINE ROUTES
 router.use('/learning', learningRoutes);
 
 // 🔐 AUTH & USER-PRIVATE ROUTES
@@ -55,13 +60,11 @@ router.post('/news/sync', requireInternalSecret, LiveController.sync);
 router.post('/news/live/sync', requireInternalSecret, LiveController.sync);
 router.get('/news/:id', EventController.getById);
 
-
 // ☀️ DAILY BRIEF
 router.get('/daily-brief', getDailyBrief);
 router.get('/news/daily-brief', getDailyBrief);
 
-// 🎓 CONCEPTS & LEGACY QUIZ ALIASES
-router.get('/concepts', getConcepts);
+// 🎓 LEGACY QUIZ ALIAS
 router.post('/quiz/submit', submitQuiz);
 
 export default router;

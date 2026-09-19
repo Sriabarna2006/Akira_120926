@@ -112,5 +112,96 @@ export const learningService = {
       console.warn(`[learningService] Quiz submit for ${eventId} notice:`, err);
     }
     return null;
-  }
+  },
+
+  // ============================================================================
+  // PHASE 8: PERSONALIZED DISCOVERY FEED & DAILY LEARNING METHODS
+  // ============================================================================
+
+  /**
+   * Fetch deterministic personalized discovery feed with explainability reasons
+   */
+  async getPersonalizedFeed(
+    options: import('../types').PersonalizationFeedOptions = {}
+  ): Promise<import('../types').PersonalizedFeedResult | null> {
+    try {
+      const res = await apiClient.get('/learning/feed', { params: options });
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[learningService] Personalized feed fetch notice:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Fetch daily learning summary with goal progress and next recommended action
+   */
+  async getDailySummary(): Promise<import('../types').DailyLearningSummary | null> {
+    try {
+      const res = await apiClient.get('/learning/daily-summary');
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[learningService] Daily summary fetch notice:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Fetch user learning preferences (daily goal & difficulty)
+   */
+  async getPreferences(): Promise<import('../types').UserLearningPreferences | null> {
+    try {
+      const res = await apiClient.get('/learning/preferences');
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[learningService] Learning preferences fetch notice:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Update user learning preferences
+   */
+  async updatePreferences(
+    preferences: Partial<import('../types').UserLearningPreferences>
+  ): Promise<import('../types').UserLearningPreferences | null> {
+    try {
+      const res = await apiClient.put('/learning/preferences', preferences);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[learningService] Learning preferences update notice:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Track user learning activity (e.g. reading explanation, viewing event)
+   */
+  async trackActivity(
+    activityType: string,
+    eventId?: string,
+    conceptId?: string,
+    metadata: Record<string, any> = {}
+  ): Promise<boolean> {
+    try {
+      const res = await apiClient.post('/learning/activity', {
+        activityType,
+        eventId,
+        conceptId,
+        metadata,
+      });
+      return Boolean(res.data?.success);
+    } catch (err) {
+      console.warn('[learningService] Activity track notice:', err);
+      return false;
+    }
+  },
 };

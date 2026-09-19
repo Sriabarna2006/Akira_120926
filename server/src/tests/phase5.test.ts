@@ -895,7 +895,7 @@ async function runPhase5VerificationSuite(): Promise<void> {
   try {
     const observation: TrendObservation = {
       eventId: 'evt_tn_ev_hub_2026',
-      observedAt: now.toISOString(),
+      observedAt: new Date().toISOString(),
       articleCount: 2,
       independentSourceCount: 2,
       trendScore: 82,

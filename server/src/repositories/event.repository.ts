@@ -217,7 +217,7 @@ export class EventRepository {
       console.warn('[EventRepository] DB query failed, using fallback:', (err as Error).message);
     }
 
-    if (isSupabaseConfigured && supabaseAdmin) {
+    if (isSupabaseConfigured && supabaseAdmin && process.env.NODE_ENV !== 'test') {
       try {
         let q = supabaseAdmin.from('canonical_events').select('*', { count: 'exact' });
         if (params.regionId && params.regionId.toUpperCase() !== 'ALL') q = q.eq('region_id', params.regionId);
@@ -305,7 +305,7 @@ export class EventRepository {
       console.warn('[EventRepository] DB findById error:', (err as Error).message);
     }
 
-    if (isSupabaseConfigured && supabaseAdmin) {
+    if (isSupabaseConfigured && supabaseAdmin && process.env.NODE_ENV !== 'test') {
       try {
         const { data, error } = await supabaseAdmin.from('canonical_events').select('*').eq('id', id).maybeSingle();
         if (!error && data) {
@@ -724,6 +724,25 @@ export class EventRepository {
       (o) => o.eventId === eventId && new Date(o.observedAt).getTime() >= cutoffMs
     );
   }
+
+  static clearMemoryStore(): void {
+    inMemoryEvents = [];
+    inMemoryObservations = [];
+  }
+
+  static save(event: CanonicalEvent): void {
+    const existingIdx = inMemoryEvents.findIndex((e) => e.id === event.id);
+    if (existingIdx >= 0) {
+      inMemoryEvents[existingIdx] = event;
+    } else {
+      inMemoryEvents.push(event);
+    }
+  }
+
+  static restoreDefaultEvents(): void {
+    inMemoryEvents = [...DEFAULT_EVENTS];
+  }
 }
+
 
 

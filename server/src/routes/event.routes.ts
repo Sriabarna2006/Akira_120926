@@ -12,6 +12,8 @@ import {
 import { rateLimiter } from '../middleware/rateLimit.middleware.js';
 import { requireInternalSecret } from '../middleware/auth.middleware.js';
 
+import { KnowledgeGraphController } from '../controllers/knowledgeGraph.controller.js';
+
 const router = Router();
 
 // 1. Core Event Endpoints
@@ -19,12 +21,26 @@ router.get('/', rateLimiter({ max: 120 }), validateQuery(eventQuerySchema), Even
 router.get('/top', rateLimiter({ max: 120 }), validateQuery(topEventsQuerySchema), EventController.getTop);
 router.get('/:id', rateLimiter({ max: 120 }), validateParams(idParamSchema), EventController.getById);
 
-// 2. Phase 6: AI Intelligence & Understanding Endpoints
+// 2. Phase 9: Cross-Topic Intelligence & Knowledge Graph Endpoints
+router.get(
+  '/:id/knowledge-map',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  KnowledgeGraphController.getEventKnowledgeMap
+);
+
+router.get(
+  '/:id/related',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  KnowledgeGraphController.getRelatedEvents
+);
+
+// 3. Phase 6: AI Intelligence & Understanding Endpoints
 router.get(
   '/:id/understanding',
   rateLimiter({ max: 120 }),
   validateParams(idParamSchema),
-  validateQuery(aiRefreshQuerySchema),
   EventController.getUnderstanding
 );
 
