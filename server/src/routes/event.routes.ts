@@ -13,6 +13,8 @@ import { rateLimiter } from '../middleware/rateLimit.middleware.js';
 import { requireInternalSecret } from '../middleware/auth.middleware.js';
 
 import { KnowledgeGraphController } from '../controllers/knowledgeGraph.controller.js';
+import { EvidenceController } from '../controllers/evidence.controller.js';
+import { StorylineController } from '../controllers/storyline.controller.js';
 
 const router = Router();
 
@@ -21,7 +23,51 @@ router.get('/', rateLimiter({ max: 120 }), validateQuery(eventQuerySchema), Even
 router.get('/top', rateLimiter({ max: 120 }), validateQuery(topEventsQuerySchema), EventController.getTop);
 router.get('/:id', rateLimiter({ max: 120 }), validateParams(idParamSchema), EventController.getById);
 
-// 2. Phase 9: Cross-Topic Intelligence & Knowledge Graph Endpoints
+// Phase 11: Temporal Storyline Evolution for Canonical Event
+router.get(
+  '/:id/storylines',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  StorylineController.getStorylinesForEvent
+);
+
+// 2. Phase 10: Trust, Evidence & Source Intelligence Endpoints
+router.get(
+  '/:id/evidence',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  EvidenceController.getEvidence
+);
+
+router.get(
+  '/:id/sources',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  EvidenceController.getSources
+);
+
+router.get(
+  '/:id/conflicts',
+  rateLimiter({ max: 120 }),
+  validateParams(idParamSchema),
+  EvidenceController.getConflicts
+);
+
+router.post(
+  '/:id/evidence',
+  requireInternalSecret,
+  validateParams(idParamSchema),
+  EvidenceController.recordEvidence
+);
+
+router.post(
+  '/:id/conflicts',
+  requireInternalSecret,
+  validateParams(idParamSchema),
+  EvidenceController.recordConflict
+);
+
+// 3. Phase 9: Cross-Topic Intelligence & Knowledge Graph Endpoints
 router.get(
   '/:id/knowledge-map',
   rateLimiter({ max: 120 }),

@@ -514,3 +514,73 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     content_snippet = EXCLUDED.content_snippet;
+
+-- ------------------------------------------------------------------------------
+-- 17. PHASE 11: TEMPORAL STORYLINE EVOLUTION & NARRATIVE TRAJECTORY
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.storylines (
+    id VARCHAR(100) PRIMARY KEY,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('EMERGING', 'DEVELOPING', 'ACTIVE', 'STABILIZING', 'CONCLUDED', 'UNKNOWN')),
+    region_id VARCHAR(50) REFERENCES public.regions(id) ON DELETE SET NULL,
+    primary_category_id VARCHAR(50) REFERENCES public.categories(id) ON DELETE SET NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    current_event_id VARCHAR(100) REFERENCES public.canonical_events(id) ON DELETE SET NULL,
+    trajectory VARCHAR(30) NOT NULL DEFAULT 'DEVELOPING' CHECK (trajectory IN ('ESCALATING', 'DEVELOPING', 'STABLE', 'DE-ESCALATING', 'CONCLUDED', 'UNKNOWN')),
+    event_count INT NOT NULL DEFAULT 1,
+    turning_point_count INT NOT NULL DEFAULT 0,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.storyline_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    storyline_id VARCHAR(100) NOT NULL REFERENCES public.storylines(id) ON DELETE CASCADE,
+    event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+    relationship_type VARCHAR(50) NOT NULL DEFAULT 'DEVELOPMENT' CHECK (relationship_type IN ('ORIGIN', 'DEVELOPMENT', 'DECISION', 'RESPONSE', 'IMPLEMENTATION', 'OUTCOME', 'UPDATE', 'OTHER')),
+    sequence_order INT NOT NULL DEFAULT 1,
+    event_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    association_score INT NOT NULL DEFAULT 100 CHECK (association_score BETWEEN 0 AND 100),
+    association_explanation TEXT,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_storyline_event UNIQUE (storyline_id, event_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.storyline_turning_points (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    storyline_id VARCHAR(100) NOT NULL REFERENCES public.storylines(id) ON DELETE CASCADE,
+    event_id VARCHAR(100) NOT NULL REFERENCES public.canonical_events(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    turning_point_type VARCHAR(50) NOT NULL DEFAULT 'OFFICIAL_DECISION',
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_storyline_turning_point UNIQUE (storyline_id, event_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.storyline_updates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    storyline_id VARCHAR(100) NOT NULL REFERENCES public.storylines(id) ON DELETE CASCADE,
+    event_id VARCHAR(100) REFERENCES public.canonical_events(id) ON DELETE SET NULL,
+    update_type VARCHAR(50) NOT NULL DEFAULT 'NEW_DEVELOPMENT',
+    summary TEXT NOT NULL,
+    delta_facts JSONB DEFAULT '[]'::jsonb,
+    delta_concepts JSONB DEFAULT '[]'::jsonb,
+    evidence_shift TEXT,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO public.storylines (
+    id, title, summary, status, region_id, primary_category_id,
+    started_at, last_updated_at, current_event_id, trajectory, event_count, turning_point_count
+) VALUES (
+    'stl_tn_ev_corridor_2026',
+    'Tamil Nadu Clean Mobility & Regional Industrial Transit Corridor Evolution',
+    'Chronological timeline of policy clearances, capital deployment, and transit infrastructure connecting Chennai-Hosur electric vehicle clusters.',
+    'ACTIVE', 'tamil-nadu', 'infrastructure',
+    NOW() - INTERVAL '7 days', NOW() - INTERVAL '1 hour', 'evt_tn_ev_hub_2026', 'DEVELOPING', 2, 1
+) ON CONFLICT (id) DO NOTHING;
+

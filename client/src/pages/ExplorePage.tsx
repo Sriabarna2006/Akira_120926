@@ -26,7 +26,9 @@ import {
 import { SearchBar } from '../components/common/SearchBar';
 import { categoryService } from '../services/categoryService';
 import { regionService } from '../services/regionService';
-import { Category, RegionItem } from '../types';
+import { storylineService } from '../services/storylineService';
+import { Category, RegionItem, Storyline } from '../types';
+import { GitBranch, Milestone } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Landmark,
@@ -50,18 +52,21 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 export const ExplorePage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<RegionItem[]>([]);
+  const [storylines, setStorylines] = useState<Storyline[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        const [cats, regs] = await Promise.all([
+        const [cats, regs, slRes] = await Promise.all([
           categoryService.getCategories(),
           regionService.getRegions(),
+          storylineService.getStorylines(),
         ]);
         setCategories(cats);
         setRegions(regs);
+        setStorylines(slRes.storylines || []);
       } catch (err) {
         console.warn('ExplorePage load error:', err);
       } finally {
@@ -92,7 +97,7 @@ export const ExplorePage: React.FC = () => {
           Explore by Topic, Region & Concept
         </h1>
         <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed mt-2">
-          Discover real-world developments categorized by domain. Dive directly into concepts, regional streams, or industry topics.
+          Discover real-world developments categorized by domain. Dive directly into chronological storylines, concepts, regional streams, or industry topics.
         </p>
 
         {/* Integrated Search Bar */}
@@ -101,7 +106,62 @@ export const ExplorePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. First-Class Regions Bar */}
+      {/* 2. PHASE 11: Active Real-World Storylines Shelf */}
+      {storylines.length > 0 && (
+        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-indigo-50/50 to-white dark:from-slate-900/90 dark:to-[#111827]/70 border border-indigo-200 dark:border-indigo-500/30 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
+              <GitBranch className="w-4 h-4" />
+              <span>Living Real-World Storylines</span>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {storylines.length} Active Narrative Trajectories
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {storylines.map((sl) => (
+              <Link
+                key={sl.id}
+                to={`/event/${sl.currentEventId || 'evt_tn_ev_hub_2026'}`}
+                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 hover:border-indigo-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all group flex flex-col justify-between gap-3 shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">
+                      {sl.category || sl.primaryCategoryId || 'General'}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase">
+                      {sl.trajectory}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">
+                    {sl.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    {sl.summary}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <Milestone className="w-3 h-3 text-amber-500" />
+                    <span>{sl.eventCount} milestones</span>
+                  </span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline flex items-center gap-1">
+                    <span>View Storyline</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. First-Class Regions Bar */}
       <div className="p-5 rounded-2xl bg-white dark:bg-[#111827]/60 border border-slate-200 dark:border-white/10 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">

@@ -80,6 +80,10 @@ export interface Source {
   credibilityScore: number;
   conglomerateId?: string;
   isActive: boolean;
+  sourceType?: SourceType;
+  consecutiveFailures?: number;
+  specialization?: string;
+  healthStatus?: SourceHealthStatus;
   lastSuccessfulFetch?: string;
   lastFailedFetch?: string;
   failureCount: number;
@@ -626,6 +630,384 @@ export interface ConceptKnowledgeStatus {
   knowledgeGaps: (ExtractedConcept & { masteryStatus: UserMasteryClassification; masteryScore: number })[];
   isReadyForTarget: boolean;
 }
+
+// ============================================================================
+// PHASE 10: TRUST, EVIDENCE & SOURCE INTELLIGENCE TYPES
+// ============================================================================
+
+export type SourceType =
+  | 'GOVERNMENT'
+  | 'OFFICIAL'
+  | 'WIRE'
+  | 'NATIONAL'
+  | 'REGIONAL'
+  | 'SPECIALIST'
+  | 'TECHNICAL'
+  | 'OTHER';
+
+export type EvidenceType =
+  | 'PRIMARY'
+  | 'INDEPENDENT_REPORTING'
+  | 'SECONDARY'
+  | 'CONTEXT'
+  | 'UNCONFIRMED';
+
+export type ConfidenceState =
+  | 'WELL_SUPPORTED'
+  | 'DEVELOPING'
+  | 'LIMITED_EVIDENCE'
+  | 'CONFLICTING'
+  | 'UNCONFIRMED';
+
+export type ConflictSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+export type ConflictStatus = 'UNRESOLVED' | 'ACKNOWLEDGED' | 'RESOLVED';
+export type SourceHealthStatus = 'HEALTHY' | 'DEGRADED' | 'DOWN' | 'PAUSED';
+
+export interface EvidenceRecord {
+  id: string;
+  eventId: string;
+  articleId?: string;
+  sourceId?: string;
+  sourceName: string;
+  evidenceType: EvidenceType;
+  sourceAuthorityTier: number;
+  isIndependent: boolean;
+  evidenceTimestamp: string;
+  evidenceStatus: string;
+  verificationMetadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EvidenceConflict {
+  id: string;
+  eventId: string;
+  field: string;
+  sourceA: string;
+  sourceB: string;
+  valueA: string;
+  valueB: string;
+  severity: ConflictSeverity;
+  status: ConflictStatus;
+  explanation?: string;
+  detectedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SourceProvenanceItem {
+  articleId?: string;
+  sourceId?: string;
+  publisherName: string;
+  title: string;
+  url: string;
+  snippet?: string;
+  publishedAt: string;
+  sourceType: SourceType;
+  authorityTier: number;
+  region?: string;
+  isIndependent: boolean;
+  evidenceType: EvidenceType;
+}
+
+export interface EvidenceScoreBreakdown {
+  independentPublisherScore: number; // 25%
+  primarySourceScore: number; // 20%
+  sourceDiversityScore: number; // 20%
+  freshnessScore: number; // 15%
+  authorityScore: number; // 10%
+  agreementScore: number; // 10%
+}
+
+export interface EventEvidenceSummary {
+  eventId: string;
+  completenessScore: number;
+  confidenceState: ConfidenceState;
+  totalArticleCount: number;
+  uniquePublisherCount: number;
+  uniqueSourceTypeCount: number;
+  primarySourceCount: number;
+  independentReportingCount: number;
+  agreementState: 'HIGH_CONSISTENCY' | 'MODERATE_CONSISTENCY' | 'CONFLICTING' | 'SINGLE_SOURCE';
+  scoreBreakdown: EvidenceScoreBreakdown;
+  conflicts: EvidenceConflict[];
+  sources: SourceProvenanceItem[];
+  explanation: string;
+  calculatedAt: string;
+}
+
+export interface SourceHealthReport {
+  sourceId: string;
+  sourceName: string;
+  sourceType: SourceType;
+  tier: number;
+  isActive: boolean;
+  healthStatus: SourceHealthStatus;
+  failureCount: number;
+  consecutiveFailures: number;
+  lastSuccessfulFetch?: string;
+  lastFailedFetch?: string;
+  updateFrequencyMinutes: number;
+  lastArticleReceived?: string;
+}
+
+// ============================================================================
+// PHASE 11: TEMPORAL STORYLINE EVOLUTION & NARRATIVE TRAJECTORY TYPES
+// ============================================================================
+
+export type StorylineStatus = 
+  | 'EMERGING' 
+  | 'DEVELOPING' 
+  | 'ACTIVE' 
+  | 'STABILIZING' 
+  | 'CONCLUDED' 
+  | 'UNKNOWN';
+
+export type StorylineTrajectoryDirection = 
+  | 'ESCALATING' 
+  | 'DEVELOPING' 
+  | 'STABLE' 
+  | 'DE-ESCALATING' 
+  | 'CONCLUDED' 
+  | 'UNKNOWN';
+
+export type StorylineRelationshipType = 
+  | 'ORIGIN' 
+  | 'DEVELOPMENT' 
+  | 'DECISION' 
+  | 'RESPONSE' 
+  | 'IMPLEMENTATION' 
+  | 'OUTCOME' 
+  | 'UPDATE' 
+  | 'OTHER';
+
+export type StorylineAssociationClassification = 
+  | 'ASSOCIATED' 
+  | 'POSSIBLE_ASSOCIATION' 
+  | 'UNRELATED';
+
+export interface Storyline {
+  id: string;
+  title: string;
+  summary: string;
+  status: StorylineStatus;
+  regionId?: string;
+  primaryCategoryId?: string;
+  region?: string;
+  category?: string;
+  startedAt: string;
+  lastUpdatedAt: string;
+  currentEventId?: string;
+  trajectory: StorylineTrajectoryDirection;
+  eventCount: number;
+  turningPointCount: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorylineEventRelation {
+  id: string;
+  storylineId: string;
+  eventId: string;
+  relationshipType: StorylineRelationshipType;
+  sequenceOrder: number;
+  eventTime: string;
+  associationScore: number;
+  associationExplanation?: string;
+  addedAt: string;
+  event?: CanonicalEvent;
+}
+
+export interface StorylineTimelineItem {
+  id: string;
+  eventId: string;
+  title: string;
+  summary: string;
+  relationshipType: StorylineRelationshipType;
+  sequenceOrder: number;
+  eventTime: string;
+  urgencyLabel: UrgencyLabel;
+  importanceScore: number;
+  finalRankScore: number;
+  sourceCount: number;
+  lifecycleStatus: LifecycleStatus;
+  isTurningPoint: boolean;
+  turningPointReason?: string;
+  evidenceCompletenessScore?: number;
+  evidenceConfidenceState?: ConfidenceState;
+  keyConcepts?: string[];
+}
+
+export interface StorylineTurningPoint {
+  id: string;
+  storylineId: string;
+  eventId: string;
+  title: string;
+  reason: string;
+  turningPointType: string;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface StorylineAssociationSignals {
+  sharedConceptsScore: number;     // 25%
+  temporalProximityScore: number;  // 20%
+  regionalAffinityScore: number;   // 15%
+  categoryMatchScore: number;      // 15%
+  semanticSimilarityScore: number; // 10%
+  knowledgeGraphScore: number;     // 10%
+  sourceOverlapScore: number;      // 5%
+}
+
+export interface StorylineAssociationScore {
+  score: number; // 0-100
+  classification: StorylineAssociationClassification;
+  signals: StorylineAssociationSignals;
+  sharedConcepts: string[];
+  timeGapHours: number;
+  explanation: string;
+}
+
+export interface StorylineTrajectoryDetails {
+  storylineId: string;
+  currentStatus: StorylineStatus;
+  trajectoryDirection: StorylineTrajectoryDirection;
+  eventCount: number;
+  timelineDurationHours: number;
+  timelineDurationFormatted: string;
+  recentActivityLevel: 'HIGH' | 'MODERATE' | 'LOW';
+  turningPointCount: number;
+  latestEvent: {
+    id: string;
+    title: string;
+    eventTime: string;
+    lifecycleStatus: LifecycleStatus;
+  };
+  previousEvent?: {
+    id: string;
+    title: string;
+    eventTime: string;
+    lifecycleStatus: LifecycleStatus;
+  };
+  latestEvidenceCompleteness: number;
+  latestConfidenceState: ConfidenceState;
+  explanation: string;
+}
+
+export interface StorylineDeltaKnowledge {
+  storylineId: string;
+  fromEventId?: string;
+  toEventId: string;
+  fromEventTitle?: string;
+  toEventTitle: string;
+  timeGapHours: number;
+  hasMeaningfulChange: boolean;
+  newFacts: string[];
+  changedFacts: string[];
+  newConcepts: ExtractedConcept[];
+  changedAffectedGroups: {
+    added: string[];
+    previous: string[];
+  };
+  statusShift?: {
+    from: string;
+    to: string;
+  };
+  evidenceEvolution: {
+    fromScore: number;
+    toScore: number;
+    scoreDelta: number;
+    fromState: ConfidenceState;
+    toState: ConfidenceState;
+    newPublishers: string[];
+  };
+  newConflicts: EvidenceConflict[];
+  understandingShift: {
+    previousSummary: string;
+    currentSummary: string;
+    keyShift: string;
+  };
+  summaryExplanation: string;
+}
+
+export interface UserStorylineLearningDelta {
+  userId: string;
+  storylineId: string;
+  hasLearnedEarlierEvents: boolean;
+  alreadyKnownEventIds: string[];
+  alreadyKnownConceptIds: string[];
+  newEventsSinceLastLearning: {
+    id: string;
+    title: string;
+    eventTime: string;
+    relationshipType: StorylineRelationshipType;
+  }[];
+  newConceptsSinceLastLearning: ExtractedConcept[];
+  evidenceStateShift?: string;
+  summaryText: string;
+}
+
+export interface StorylineEvidenceOverview {
+  storylineId: string;
+  latestCompletenessScore: number;
+  overallConfidenceState: ConfidenceState;
+  totalUniquePublishers: number;
+  totalPrimarySources: number;
+  totalIndependentReportingCount: number;
+  publisherTypeCounts: Record<string, number>;
+  conflictCount: number;
+  timelineEvidenceEvolution: {
+    eventId: string;
+    eventTitle: string;
+    eventTime: string;
+    completenessScore: number;
+    confidenceState: ConfidenceState;
+    sourceCount: number;
+  }[];
+}
+
+export interface StorylineKnowledgeOverview {
+  storylineId: string;
+  dominantConcepts: ExtractedConcept[];
+  timelineConceptEvolution: {
+    eventId: string;
+    eventTitle: string;
+    newConceptsIntroduced: ExtractedConcept[];
+  }[];
+  prerequisiteConcepts: ExtractedConcept[];
+  relatedConcepts: ExtractedConcept[];
+  relatedStorylines: {
+    id: string;
+    title: string;
+    status: StorylineStatus;
+    trajectory: StorylineTrajectoryDirection;
+    sharedConcepts: string[];
+    relevanceScore: number;
+  }[];
+}
+
+export interface StorylineDetailResponse {
+  storyline: Storyline;
+  trajectory: StorylineTrajectoryDetails;
+  timeline: StorylineTimelineItem[];
+  turningPoints: StorylineTurningPoint[];
+  latestDelta: StorylineDeltaKnowledge;
+  evidenceOverview: StorylineEvidenceOverview;
+  knowledgeOverview: StorylineKnowledgeOverview;
+}
+
+export interface StorylineFilterParams {
+  regionId?: string;
+  categoryId?: string;
+  status?: StorylineStatus;
+  trajectory?: StorylineTrajectoryDirection;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+
 
 
 

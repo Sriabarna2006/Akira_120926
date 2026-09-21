@@ -15,6 +15,7 @@ import { EventController } from '../controllers/event.controller.js';
 import { LiveController } from '../controllers/live.controller.js';
 
 import conceptRoutes from './concept.routes.js';
+import storylineRoutes from './storyline.routes.js';
 
 const router = Router();
 
@@ -26,7 +27,7 @@ router.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'AKIRA Real-World Intelligence & Learning Assistant API',
-    version: 'Phase 9 (Knowledge Graph & Cross-Topic Intelligence)',
+    version: 'Phase 11 (Temporal Storyline Evolution & Narrative Trajectory)',
     timestamp: new Date().toISOString(),
   });
 });
@@ -40,6 +41,9 @@ router.use('/sources', sourceRoutes);
 router.use('/articles', articleRoutes);
 router.use('/events', eventRoutes);
 router.use('/live', liveRoutes);
+
+// 📜 PHASE 11: TEMPORAL STORYLINE EVOLUTION & NARRATIVE TRAJECTORY ROUTES
+router.use('/storylines', storylineRoutes);
 
 // 🧠 PHASE 9: KNOWLEDGE GRAPH & CONCEPT DOMAIN ROUTES
 router.use('/concepts', conceptRoutes);

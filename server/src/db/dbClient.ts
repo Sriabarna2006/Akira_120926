@@ -157,6 +157,91 @@ if (isNeonConfigured && DATABASE_URL) {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS public.event_evidence (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL,
+        article_id UUID,
+        source_id VARCHAR(100),
+        source_name VARCHAR(150) NOT NULL,
+        evidence_type VARCHAR(50) NOT NULL DEFAULT 'INDEPENDENT_REPORTING',
+        source_authority_tier INT NOT NULL DEFAULT 2,
+        is_independent BOOLEAN NOT NULL DEFAULT true,
+        evidence_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        evidence_status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+        verification_metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.evidence_conflicts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id VARCHAR(100) NOT NULL,
+        field VARCHAR(100) NOT NULL,
+        source_a VARCHAR(150) NOT NULL,
+        source_b VARCHAR(150) NOT NULL,
+        value_a TEXT NOT NULL,
+        value_b TEXT NOT NULL,
+        severity VARCHAR(20) NOT NULL DEFAULT 'LOW',
+        status VARCHAR(30) NOT NULL DEFAULT 'UNRESOLVED',
+        explanation TEXT,
+        detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.storylines (
+        id VARCHAR(100) PRIMARY KEY,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+        region_id VARCHAR(50),
+        primary_category_id VARCHAR(50),
+        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        current_event_id VARCHAR(100),
+        trajectory VARCHAR(30) NOT NULL DEFAULT 'DEVELOPING',
+        event_count INT NOT NULL DEFAULT 1,
+        turning_point_count INT NOT NULL DEFAULT 0,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.storyline_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        storyline_id VARCHAR(100) NOT NULL,
+        event_id VARCHAR(100) NOT NULL,
+        relationship_type VARCHAR(50) NOT NULL DEFAULT 'DEVELOPMENT',
+        sequence_order INT NOT NULL DEFAULT 1,
+        event_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        association_score INT NOT NULL DEFAULT 100,
+        association_explanation TEXT,
+        added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.storyline_turning_points (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        storyline_id VARCHAR(100) NOT NULL,
+        event_id VARCHAR(100) NOT NULL,
+        title TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        turning_point_type VARCHAR(50) NOT NULL DEFAULT 'OFFICIAL_DECISION',
+        occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.storyline_updates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        storyline_id VARCHAR(100) NOT NULL,
+        event_id VARCHAR(100),
+        update_type VARCHAR(50) NOT NULL DEFAULT 'NEW_DEVELOPMENT',
+        summary TEXT NOT NULL,
+        delta_facts JSONB DEFAULT '[]'::jsonb,
+        delta_concepts JSONB DEFAULT '[]'::jsonb,
+        evidence_shift TEXT,
+        recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       INSERT INTO public.canonical_events (
         id, title, summary, region_id, category_id, urgency_label,
         importance_score, velocity_score, final_rank_score, why_it_matters,
@@ -170,7 +255,7 @@ if (isNeonConfigured && DATABASE_URL) {
         NOW() - INTERVAL '4 hours', NOW() - INTERVAL '1 hour', 2, 'OFFICIAL_CONFIRMATION', NOW() - INTERVAL '4 hours'
       ) ON CONFLICT (id) DO NOTHING;
     `).catch((err) => {
-      console.warn('[DB] Phase 6 & Phase 7 tables initialization notice:', err.message);
+      console.warn('[DB] Phase tables initialization notice:', err.message);
     });
   } catch (err) {
     console.warn('[DB] Failed to initialize PostgreSQL pool:', (err as Error).message);

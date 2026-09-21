@@ -1,0 +1,51 @@
+/**
+ * AKIRA Phase 11: Storyline & Narrative Trajectory Configuration
+ * Centralized deterministic weights, thresholds, and trajectory definitions.
+ */
+
+export const STORYLINE_CONFIG = {
+  WEIGHTS: {
+    SHARED_CONCEPTS: 0.25,     // 25%
+    TEMPORAL_PROXIMITY: 0.20,  // 20%
+    REGIONAL_AFFINITY: 0.15,   // 15%
+    CATEGORY_MATCH: 0.15,      // 15%
+    SEMANTIC_SIMILARITY: 0.10, // 10%
+    KNOWLEDGE_GRAPH: 0.10,     // 10%
+    SOURCE_OVERLAP: 0.05,      // 5%
+  },
+
+  THRESHOLDS: {
+    AUTO_ASSOCIATE_MIN_SCORE: 65,
+    POSSIBLE_ASSOCIATE_MIN_SCORE: 40,
+    MAX_TEMPORAL_WINDOW_DAYS: 30,
+  },
+
+  TEMPORAL_SCALING: {
+    WITHIN_24_HOURS: 100,
+    WITHIN_3_DAYS: 90,
+    WITHIN_7_DAYS: 75,
+    WITHIN_14_DAYS: 60,
+    WITHIN_30_DAYS: 40,
+    BEYOND_30_DAYS: 15,
+  },
+
+  CONCEPT_OVERLAP_SCALING: {
+    FOUR_OR_MORE: 100,
+    THREE: 85,
+    TWO: 65,
+    ONE: 40,
+    ZERO: 0,
+  },
+
+  TURNING_POINT_TRIGGERS: {
+    HIGH_IMPORTANCE_THRESHOLD: 90,
+    SIGNIFICANT_IMPORTANCE_DELTA: 15,
+    MAJOR_LIFECYCLE_STAGES: ['OFFICIAL_CONFIRMATION', 'RESOLVED'],
+    DECISIVE_RELATIONSHIP_TYPES: ['ORIGIN', 'DECISION', 'OUTCOME', 'IMPLEMENTATION'],
+  },
+
+  TRAJECTORY_ACTIVITY_THRESHOLDS: {
+    HIGH_HOURS: 24,
+    MODERATE_HOURS: 72,
+  },
+} as const;

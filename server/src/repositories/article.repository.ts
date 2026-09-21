@@ -347,4 +347,11 @@ export class ArticleRepository {
     inMemoryArticles.push(newArticle);
     return newArticle;
   }
+
+  static async findByEventId(eventId: string): Promise<Article[]> {
+    if (!eventId) return [];
+    const res = await this.findAll({ eventId, limit: 100 });
+    return res.articles;
+  }
 }
+
