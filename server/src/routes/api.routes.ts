@@ -16,6 +16,7 @@ import { LiveController } from '../controllers/live.controller.js';
 
 import conceptRoutes from './concept.routes.js';
 import storylineRoutes from './storyline.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'AKIRA Real-World Intelligence & Learning Assistant API',
-    version: 'Phase 11 (Temporal Storyline Evolution & Narrative Trajectory)',
+    version: 'Phase 14 (Real-Time Intelligence & Mobile Notification System)',
     timestamp: new Date().toISOString(),
   });
 });
@@ -50,6 +51,9 @@ router.use('/concepts', conceptRoutes);
 
 // 🧠 PHASE 7 & 8: PERSONALIZATION & LEARNING ENGINE ROUTES
 router.use('/learning', learningRoutes);
+
+// 🔔 PHASE 14: REAL-TIME INTELLIGENCE & MOBILE NOTIFICATION ROUTES
+router.use('/notifications', notificationRoutes);
 
 // 🔐 AUTH & USER-PRIVATE ROUTES
 router.use('/auth', authRoutes);

@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "npx tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js && node dist/tests/phase3.test.js && node dist/tests/phase4.test.js && node dist/tests/phase5.test.js && node dist/tests/phase6.test.js && node dist/tests/phase7.test.js && node dist/tests/phase8.test.js && node dist/tests/phase9.test.js && node dist/tests/phase10.test.js && node dist/tests/phase11.test.js && node dist/tests/phase12.test.js",
+    "test": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js && node dist/tests/phase3.test.js && node dist/tests/phase4.test.js && node dist/tests/phase5.test.js && node dist/tests/phase6.test.js && node dist/tests/phase7.test.js && node dist/tests/phase8.test.js && node dist/tests/phase9.test.js && node dist/tests/phase10.test.js && node dist/tests/phase11.test.js && node dist/tests/phase12.test.js && node dist/tests/phase13.test.js && node dist/tests/phase14.test.js",
     "test:phase1": "npx tsc -p tsconfig.json && node dist/tests/phase1.test.js",
     "test:phase3": "npx tsc -p tsconfig.json && node dist/tests/phase3.test.js",
     "test:phase4": "npx tsc -p tsconfig.json && node dist/tests/phase4.test.js",
@@ -18,16 +18,20 @@
     "test:phase9": "npx tsc -p tsconfig.json && node dist/tests/phase9.test.js",
     "test:phase10": "npx tsc -p tsconfig.json && node dist/tests/phase10.test.js",
     "test:phase11": "npx tsc -p tsconfig.json && node dist/tests/phase11.test.js",
-    "test:phase12": "npx tsc -p tsconfig.json && node dist/tests/phase12.test.js"
+    "test:phase12": "npx tsc -p tsconfig.json && node dist/tests/phase12.test.js",
+    "test:phase13": "npx tsc -p tsconfig.json && node dist/tests/phase13.test.js",
+    "test:phase14": "npx tsc -p tsconfig.json && node dist/tests/phase14.test.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/supabase-js": "^2.116.0",
+    "@types/web-push": "^3.6.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "pg": "^8.23.0",
     "rss-parser": "^3.13.0",
+    "web-push": "^3.6.7",
     "zod": "^3.24.2"
   },
   "devDependencies": {

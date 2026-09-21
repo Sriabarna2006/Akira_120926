@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { StorylineController } from '../controllers/storyline.controller.js';
 import { StorylineCatchupController } from '../controllers/storylineCatchup.controller.js';
+import { ScenarioSimulationController } from '../controllers/scenarioSimulation.controller.js';
 import { validateQuery, validateParams, validateBody } from '../middleware/validate.middleware.js';
 import { idParamSchema } from '../validators/query.validator.js';
 import {
@@ -13,6 +14,11 @@ import {
   storylineCatchupQuerySchema,
   storylineProgressBodySchema,
 } from '../validators/storylineCatchup.validator.js';
+import {
+  storylineScenarioParamsSchema,
+  createScenarioBodySchema,
+  scenarioQuerySchema,
+} from '../validators/scenarioSimulation.validator.js';
 import { rateLimiter } from '../middleware/rateLimit.middleware.js';
 import { requireInternalSecret } from '../middleware/auth.middleware.js';
 
@@ -67,7 +73,52 @@ router.get(
   StorylineCatchupController.getJourney
 );
 
-// 6. Storyline Detail Aggregation
+// 6. Phase 13: Scenario Simulation Endpoints
+router.post(
+  '/:id/scenarios',
+  rateLimiter({ max: 30 }),
+  validateParams(storylineIdParamSchema),
+  validateBody(createScenarioBodySchema),
+  ScenarioSimulationController.createScenario
+);
+
+router.get(
+  '/:id/scenarios',
+  rateLimiter({ max: 120 }),
+  validateParams(storylineIdParamSchema),
+  validateQuery(scenarioQuerySchema),
+  ScenarioSimulationController.listScenarios
+);
+
+router.get(
+  '/:id/scenarios/:scenarioId',
+  rateLimiter({ max: 120 }),
+  validateParams(storylineScenarioParamsSchema),
+  ScenarioSimulationController.getScenario
+);
+
+router.post(
+  '/:id/scenarios/:scenarioId/refresh',
+  rateLimiter({ max: 30 }),
+  validateParams(storylineScenarioParamsSchema),
+  ScenarioSimulationController.refreshScenario
+);
+
+router.delete(
+  '/:id/scenarios/:scenarioId',
+  rateLimiter({ max: 60 }),
+  validateParams(storylineScenarioParamsSchema),
+  ScenarioSimulationController.deleteScenario
+);
+
+router.get(
+  '/:id/scenarios/:scenarioId/learning',
+  rateLimiter({ max: 120 }),
+  validateParams(storylineScenarioParamsSchema),
+  ScenarioSimulationController.getScenarioLearning
+);
+
+// 7. Storyline Detail Aggregation
 router.get(
   '/:id',
   rateLimiter({ max: 120 }),

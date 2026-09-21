@@ -1160,6 +1160,329 @@ export interface StorylineJourneyResponse {
   briefing: StorylineCatchupBriefing;
 }
 
+// ==============================================================================
+// PHASE 13: INTERACTIVE STORYLINE SCENARIO SIMULATION & HYPOTHESIS EXPLORATION
+// ==============================================================================
+
+export type ScenarioType =
+  | 'REMOVE_EVENT'
+  | 'DELAY_EVENT'
+  | 'CHANGE_CONDITION'
+  | 'REVERSE_RELATION'
+  | 'CONTINUE_CONDITION';
+
+export type EpistemicClassification =
+  | 'VERIFIED_FACT'
+  | 'DOCUMENTED_RELATION'
+  | 'HYPOTHETICAL_ASSUMPTION'
+  | 'DERIVED_CONSEQUENCE'
+  | 'UNKNOWN';
+
+export type ScenarioImpactDirection =
+  | 'DISRUPTED'
+  | 'DELAYED'
+  | 'AMPLIFIED'
+  | 'MITIGATED'
+  | 'UNCERTAIN';
+
+export type ScenarioConceptImpactType =
+  | 'DIRECT'
+  | 'PROPAGATED'
+  | 'PREREQUISITE'
+  | 'REINFORCED';
+
+export interface StorylineScenario {
+  id: string;
+  storylineId: string;
+  userId: string;
+  title: string;
+  question: string;
+  scenarioType: ScenarioType;
+  assumptionText: string;
+  status: 'ACTIVE' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScenarioAssumption {
+  id: string;
+  scenarioId: string;
+  targetEventId?: string | null;
+  assumptionType: ScenarioType;
+  originalState: {
+    title?: string;
+    summary?: string;
+    eventTime?: string;
+    status?: string;
+  };
+  hypotheticalState: {
+    title?: string;
+    conditionShift?: string;
+    timeShiftHours?: number;
+    hypotheticalStatus?: string;
+  };
+  rationale: string;
+  createdAt: string;
+}
+
+export interface ScenarioImpact {
+  id: string;
+  scenarioId: string;
+  sourceEntityId: string;
+  affectedEntityId: string;
+  entityType: 'EVENT' | 'CONCEPT' | 'TURNING_POINT';
+  relationshipType: string;
+  impactDirection: ScenarioImpactDirection;
+  impactStrength: number;
+  explanation: string;
+  evidenceState?: {
+    completenessScore: number;
+    confidenceState: ConfidenceState;
+    hasConflicts: boolean;
+  };
+  createdAt: string;
+}
+
+export interface ScenarioAffectedEvent {
+  eventId: string;
+  title: string;
+  eventTime: string;
+  isTurningPoint: boolean;
+  relationshipToTarget: string;
+  impactDirection: ScenarioImpactDirection;
+  classification: EpistemicClassification;
+  explanation: string;
+  evidenceCompletenessScore: number;
+}
+
+export interface ScenarioAffectedConcept {
+  conceptId: string;
+  title: string;
+  slug: string;
+  category: string;
+  shortDefinition: string;
+  masteryStatus: UserMasteryClassification;
+  masteryScore: number;
+  impactType: ScenarioConceptImpactType;
+  explanation: string;
+  reason: string;
+}
+
+export interface ScenarioDerivedConsequence {
+  statement: string;
+  classification: 'DERIVED_CONSEQUENCE';
+  supportingRelations: string[];
+  impactDirection: ScenarioImpactDirection;
+  groundingExplanation: string;
+}
+
+export interface ScenarioUnknownArea {
+  topic: string;
+  reason: string;
+  explanation: string;
+  classification: 'UNKNOWN';
+}
+
+export interface ScenarioQuizItem {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+  conceptId?: string;
+  relatedEventId?: string;
+}
+
+export interface ScenarioResult {
+  scenario: StorylineScenario;
+  assumption: ScenarioAssumption;
+  baselineFacts: {
+    statement: string;
+    eventId?: string;
+    conceptId?: string;
+    classification: 'VERIFIED_FACT' | 'DOCUMENTED_RELATION';
+    evidenceScore: number;
+  }[];
+  hypotheticalChange: {
+    description: string;
+    targetEventTitle?: string;
+    assumptionType: ScenarioType;
+    classification: 'HYPOTHETICAL_ASSUMPTION';
+  };
+  affectedEvents: ScenarioAffectedEvent[];
+  affectedConcepts: ScenarioAffectedConcept[];
+  derivedConsequences: ScenarioDerivedConsequence[];
+  unknowns: ScenarioUnknownArea[];
+  evidenceSummary: {
+    completenessScore: number;
+    confidenceState: ConfidenceState;
+    publisherCount: number;
+    hasConflicts: boolean;
+    conflictNote?: string;
+  };
+  groundedSummary: string;
+  quiz?: ScenarioQuizItem[];
+  generatedAt: string;
+  isCached: boolean;
+}
+
+export interface ScenarioLearningSummary {
+  scenarioId: string;
+  storylineId: string;
+  affectedConcepts: ScenarioAffectedConcept[];
+  recommendedActions: {
+    actionType: 'REVIEW_CONCEPT' | 'LEARN_CONCEPT' | 'TAKE_SCENARIO_QUIZ' | 'EXPLORE_STORYLINE';
+    conceptId?: string;
+    title: string;
+    explanation: string;
+  }[];
+  quiz: ScenarioQuizItem[];
+}
+
+// =========================================================================
+// PHASE 14: REAL-TIME INTELLIGENCE & MOBILE NOTIFICATION SYSTEM TYPES
+// =========================================================================
+
+export type NotificationType =
+  | 'BREAKING_NEWS'
+  | 'MAJOR_UPDATE'
+  | 'STORYLINE_UPDATE'
+  | 'STUDY_REMINDER'
+  | 'REVIEW_DUE'
+  | 'KNOWLEDGE_GAP'
+  | 'DAILY_GOAL'
+  | 'DAILY_BRIEFING';
+
+export type NotificationPriority = 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
+
+export type NotificationStatus =
+  | 'PENDING'
+  | 'SENT'
+  | 'DELIVERED'
+  | 'OPENED'
+  | 'FAILED'
+  | 'EXPIRED'
+  | 'CANCELLED';
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+  deviceLabel?: string;
+  platform?: 'android' | 'ios' | 'desktop' | 'mobile' | 'browser' | string;
+  userAgent?: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  deviceLabel: string;
+  platform: string;
+  userAgent?: string;
+  createdAt: string;
+  lastSeenAt: string;
+  revokedAt?: string | null;
+}
+
+export interface NotificationPreference {
+  id?: string;
+  userId: string;
+  enabled: boolean;
+  breakingEnabled: boolean;
+  majorUpdateEnabled: boolean;
+  storylineEnabled: boolean;
+  studyEnabled: boolean;
+  reviewEnabled: boolean;
+  dailyBriefingEnabled: boolean;
+  knowledgeGapEnabled: boolean;
+  dailyGoalEnabled: boolean;
+  studyTime: string; // HH:MM format e.g. "19:00"
+  dailyBriefingTime: string; // HH:MM format e.g. "08:00"
+  quietHoursStart: string; // HH:MM format e.g. "22:30"
+  quietHoursEnd: string; // HH:MM format e.g. "07:00"
+  timezone: string; // IANA timezone e.g. "Asia/Kolkata" or "UTC"
+  minimumImportance: number;
+  minimumEvidence: number;
+  maximumDailyNotifications: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  notificationType: NotificationType;
+  title: string;
+  body: string;
+  url: string;
+  eventId?: string | null;
+  storylineId?: string | null;
+  conceptId?: string | null;
+  dedupeKey: string;
+  priority: NotificationPriority;
+  status: NotificationStatus;
+  createdAt: string;
+  sentAt?: string | null;
+  openedAt?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface NotificationDelivery {
+  id: string;
+  notificationId: string;
+  subscriptionId: string;
+  status: 'PENDING' | 'DELIVERED' | 'FAILED' | 'REVOKED';
+  providerResponse?: string | null;
+  attemptedAt: string;
+  deliveredAt?: string | null;
+  failedAt?: string | null;
+}
+
+export interface NotificationCandidate {
+  userId: string;
+  notificationType: NotificationType;
+  title: string;
+  body: string;
+  url: string;
+  eventId?: string;
+  storylineId?: string;
+  conceptId?: string;
+  dedupeKey: string;
+  priority: NotificationPriority;
+  importanceScore?: number;
+  evidenceScore?: number;
+  hasConflicts?: boolean;
+  isBypassQuietHours?: boolean;
+}
+
+export interface NotificationDecisionResult {
+  shouldNotify: boolean;
+  candidate?: NotificationCandidate;
+  rejectionReason?:
+    | 'USER_DISABLED'
+    | 'TYPE_DISABLED'
+    | 'QUIET_HOURS'
+    | 'LOW_IMPORTANCE'
+    | 'INSUFFICIENT_EVIDENCE'
+    | 'EVIDENCE_CONFLICT'
+    | 'DAILY_CAP_EXCEEDED'
+    | 'DUPLICATE_DEDUPE_KEY'
+    | 'COOLDOWN_ACTIVE'
+    | 'NO_SCHEDULED_ACTION'
+    | 'NO_REVIEWS_DUE'
+    | 'NO_ACTIVE_SUBSCRIPTION';
+  details?: Record<string, any>;
+}
+
+
+
 
 
 

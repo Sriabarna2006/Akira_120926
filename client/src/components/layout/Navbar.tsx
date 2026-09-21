@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Bookmark, Menu, LogIn, LogOut, Shield, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -12,8 +12,29 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, openAuthModal, signOut } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      const fetchUnread = async () => {
+        try {
+          const { notificationService } = await import('../../services/notificationService');
+          const count = await notificationService.getUnreadCount();
+          setUnreadCount(count);
+        } catch (e) {
+          // ignore
+        }
+      };
+
+      fetchUnread();
+      const interval = setInterval(fetchUnread, 60000); // 1 minute refresh
+      return () => clearInterval(interval);
+    } else {
+      setUnreadCount(0);
+    }
+  }, [user]);
 
   const handleSearch = (query: string) => {
     if (query.trim()) {
@@ -76,7 +97,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               aria-label="View notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-[#0B0F17]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-cyan-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#0B0F17]">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {/* My Library Link */}

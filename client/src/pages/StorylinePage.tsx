@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { storylineCatchupService } from '../services/storylineCatchupService';
 import { StorylineJourney } from '../components/storylines/StorylineJourney';
+import { ScenarioExplorer } from '../components/storylines/ScenarioExplorer';
 import {
   Compass,
   Clock,
@@ -17,7 +18,7 @@ import {
 export const StorylinePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'journey' | 'turningPoints' | 'knowledge'>('journey');
+  const [activeTab, setActiveTab] = useState<'journey' | 'turningPoints' | 'knowledge' | 'scenarios'>('journey');
 
   // Fetch Journey & Catch-Up Data
   const {
@@ -292,6 +293,16 @@ export const StorylinePage: React.FC = () => {
             Your Knowledge ({briefing.allConcepts.length})
             {activeTab === 'knowledge' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-emerald-500" />}
           </button>
+
+          <button
+            onClick={() => setActiveTab('scenarios')}
+            className={`pb-3 text-sm font-bold transition-all relative ${
+              activeTab === 'scenarios' ? 'text-purple-400' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Scenario Simulation
+            {activeTab === 'scenarios' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-500" />}
+          </button>
         </div>
 
         {/* Tab 1: Chronological Scrubber Journey */}
@@ -395,6 +406,11 @@ export const StorylinePage: React.FC = () => {
               })}
             </div>
           </div>
+        )}
+
+        {/* Tab 4: Interactive Scenario Simulation Explorer */}
+        {activeTab === 'scenarios' && (
+          <ScenarioExplorer storylineId={id!} events={events} />
         )}
       </div>
     </div>

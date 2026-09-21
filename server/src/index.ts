@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import apiRoutes from './routes/api.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { ingestionScheduler } from './services/ingestion/scheduler.js';
+import { notificationScheduler } from './services/notification/notificationScheduler.js';
 
 dotenv.config();
 
@@ -43,6 +44,9 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
 
     // Initialize background news ingestion scheduler
     ingestionScheduler.start();
+
+    // Initialize background real-time intelligence & learning notification scheduler
+    notificationScheduler.start();
   });
 }
 
