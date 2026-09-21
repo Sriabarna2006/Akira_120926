@@ -242,6 +242,31 @@ if (isNeonConfigured && DATABASE_URL) {
         recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS public.storyline_catchup_briefings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        storyline_id VARCHAR(100) NOT NULL,
+        user_id UUID,
+        last_seen_event_id VARCHAR(100),
+        briefing_json JSONB NOT NULL,
+        version INT NOT NULL DEFAULT 1,
+        generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour'),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_storyline_progress (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        storyline_id VARCHAR(100) NOT NULL,
+        last_seen_event_id VARCHAR(100),
+        reviewed_event_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        is_fully_caught_up BOOLEAN NOT NULL DEFAULT false,
+        last_reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       INSERT INTO public.canonical_events (
         id, title, summary, region_id, category_id, urgency_label,
         importance_score, velocity_score, final_rank_score, why_it_matters,

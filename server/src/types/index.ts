@@ -1007,6 +1007,159 @@ export interface StorylineFilterParams {
   limit?: number;
 }
 
+// ==============================================================================
+// PHASE 12: LIVING STORYLINE CATCH-UP & CHRONOLOGICAL SYNTHESIS
+// ==============================================================================
+
+export type StorylineCatchupStatus =
+  | 'FULLY_CAUGHT_UP'
+  | 'NEW_DEVELOPMENTS'
+  | 'MAJOR_UPDATE'
+  | 'MULTIPLE_TURNING_POINTS'
+  | 'CONFLICTING_INFORMATION'
+  | 'LIMITED_EVIDENCE';
+
+export type StorylineNextActionType =
+  | 'REVIEW_CONCEPT'
+  | 'COMPLETE_QUIZ'
+  | 'READ_LATEST_EVENT'
+  | 'LEARN_PREREQUISITE'
+  | 'REVIEW_STORYLINE'
+  | 'EXPLORE_RELATED_EVENT'
+  | 'NO_ACTION';
+
+export type ConceptMasteryCategory =
+  | 'ALREADY_KNOWN'
+  | 'NEEDS_REVIEW'
+  | 'NEEDS_LEARNING'
+  | 'NEW';
+
+export interface StorylineCatchupConcept {
+  id: string;
+  title: string;
+  slug: string;
+  shortDefinition: string;
+  category: string;
+  masteryStatus: ConceptMasteryCategory;
+  masteryScore: number;
+  reason?: string;
+}
+
+export interface StorylineCatchupDelta {
+  newFacts: string[];
+  changedFacts: string[];
+  newConcepts: StorylineCatchupConcept[];
+  supersededAssumptions: string[];
+  hasMeaningfulChange: boolean;
+}
+
+export interface StorylineCatchupEvent {
+  id: string;
+  title: string;
+  summary: string;
+  eventTime: string;
+  isTurningPoint: boolean;
+  turningPointType?: StorylineRelationshipType;
+  turningPointReason?: string;
+  isReviewedByUser: boolean;
+  evidenceCompletenessScore: number;
+  evidenceConfidenceState: ConfidenceState;
+  newFactsIntroduced: string[];
+  changedFacts: string[];
+  concepts: ExtractedConcept[];
+}
+
+export interface StorylineNextAction {
+  actionType: StorylineNextActionType;
+  title: string;
+  explanation: string;
+  targetId?: string;
+  targetType?: 'event' | 'concept' | 'storyline' | 'quiz';
+  priority: number;
+}
+
+export interface StorylineCatchupBriefing {
+  id: string;
+  storylineId: string;
+  storylineTitle: string;
+  briefingSummary: string;
+  lastKnownEvent: {
+    id: string;
+    title: string;
+    eventTime: string;
+    summary: string;
+  } | null;
+  newDevelopmentsCount: number;
+  newDevelopments: {
+    id: string;
+    title: string;
+    eventTime: string;
+    summary: string;
+    isTurningPoint: boolean;
+    turningPointType?: string;
+  }[];
+  majorTurningPoints: {
+    id: string;
+    eventId: string;
+    eventTitle: string;
+    turningPointType: string;
+    reason: string;
+    occurredAt: string;
+  }[];
+  currentState: StorylineStatus;
+  trajectory: StorylineTrajectoryDirection;
+  evidenceState: {
+    completenessScore: number;
+    confidenceState: ConfidenceState;
+    uniquePublishersCount: number;
+    primarySourcesCount: number;
+    conflictSummary?: string;
+    hasConflicts: boolean;
+  };
+  newConcepts: StorylineCatchupConcept[];
+  conceptsToReview: StorylineCatchupConcept[];
+  allConcepts: StorylineCatchupConcept[];
+  consolidatedDelta: StorylineCatchupDelta;
+  catchupStatus: StorylineCatchupStatus[];
+  nextAction: StorylineNextAction;
+  isPersonalized: boolean;
+  userId?: string;
+  unreadEventCount: number;
+  totalEventCount: number;
+  reviewedEventCount: number;
+  generatedAt: string;
+  expiresAt?: string;
+}
+
+export interface UserStorylineProgress {
+  id: string;
+  userId: string;
+  storylineId: string;
+  lastSeenEventId?: string | null;
+  reviewedEventIds: string[];
+  isFullyCaughtUp: boolean;
+  lastReviewedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorylineJourneyResponse {
+  storyline: Storyline;
+  trajectory: StorylineTrajectoryDetails;
+  events: StorylineCatchupEvent[];
+  turningPoints: StorylineTurningPoint[];
+  overallEvidence: StorylineEvidenceOverview;
+  userProgress: {
+    userId?: string;
+    lastSeenEventId: string | null;
+    reviewedEventCount: number;
+    totalEventCount: number;
+    progressPercentage: number;
+    isFullyCaughtUp: boolean;
+  };
+  briefing: StorylineCatchupBriefing;
+}
+
 
 
 

@@ -577,10 +577,35 @@ INSERT INTO public.storylines (
     id, title, summary, status, region_id, primary_category_id,
     started_at, last_updated_at, current_event_id, trajectory, event_count, turning_point_count
 ) VALUES (
-    'stl_tn_ev_corridor_2026',
-    'Tamil Nadu Clean Mobility & Regional Industrial Transit Corridor Evolution',
-    'Chronological timeline of policy clearances, capital deployment, and transit infrastructure connecting Chennai-Hosur electric vehicle clusters.',
-    'ACTIVE', 'tamil-nadu', 'infrastructure',
-    NOW() - INTERVAL '7 days', NOW() - INTERVAL '1 hour', 'evt_tn_ev_hub_2026', 'DEVELOPING', 2, 1
-) ON CONFLICT (id) DO NOTHING;
+-- ------------------------------------------------------------------------------
+-- 18. PHASE 12: LIVING STORYLINE CATCH-UP BRIEFINGS & CHRONOLOGICAL SYNTHESIS
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.storyline_catchup_briefings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    storyline_id VARCHAR(100) NOT NULL REFERENCES public.storylines(id) ON DELETE CASCADE,
+    user_id UUID,
+    last_seen_event_id VARCHAR(100) REFERENCES public.canonical_events(id) ON DELETE SET NULL,
+    briefing_json JSONB NOT NULL,
+    version INT NOT NULL DEFAULT 1,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_storyline_catchup_user_briefing 
+    ON public.storyline_catchup_briefings (storyline_id, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid));
+
+CREATE TABLE IF NOT EXISTS public.user_storyline_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    storyline_id VARCHAR(100) NOT NULL REFERENCES public.storylines(id) ON DELETE CASCADE,
+    last_seen_event_id VARCHAR(100) REFERENCES public.canonical_events(id) ON DELETE SET NULL,
+    reviewed_event_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_fully_caught_up BOOLEAN NOT NULL DEFAULT false,
+    last_reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_storyline_progress UNIQUE (user_id, storyline_id)
+);
 

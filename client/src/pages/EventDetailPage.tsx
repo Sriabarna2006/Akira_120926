@@ -742,8 +742,16 @@ export const EventDetailPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Trajectory & Status Badges */}
+            {/* Trajectory & Status Badges + Catch Up Button */}
             <div className="flex flex-wrap sm:flex-col items-end gap-2 shrink-0">
+              <Link
+                to={`/storyline/${storylineDetail.storyline.id}`}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-500/25 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Catch Up in 60s</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
               <div className="px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30">
                 <Compass className="w-3.5 h-3.5" />
                 <span>{storylineDetail.trajectory.trajectoryDirection} Trajectory</span>

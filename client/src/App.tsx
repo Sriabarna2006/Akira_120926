@@ -15,6 +15,7 @@ import { LibraryPage } from './pages/LibraryPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { ConceptDetailPage } from './pages/ConceptDetailPage';
+import { StorylinePage } from './pages/StorylinePage';
 import { AllNewsPage } from './pages/AllNewsPage';
 import { CategoryPage } from './pages/CategoryPage';
 import { SearchPage } from './pages/SearchPage';
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
 
                 {/* Detail & Filter Routes */}
                 <Route path="event/:id" element={<EventDetailPage />} />
+                <Route path="storyline/:id" element={<StorylinePage />} />
                 <Route path="concept/:id" element={<ConceptDetailPage />} />
                 <Route path="category/:slug" element={<CategoryPage />} />
                 <Route path="search" element={<SearchPage />} />
