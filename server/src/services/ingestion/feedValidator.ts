@@ -21,11 +21,47 @@ export class FeedValidator {
     }
 
     if (!isSafeUrl(url)) {
-      return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: `URL blocked by SSRF protection: ${url}` };
+      return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: `SSRF Guard: Blocked invalid or unsafe feed URL: ${url}` };
+    }
+
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+
+      // Check loopback, private IP ranges and internal AWS/cloud metadata
+      if (
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host === '::1' ||
+        host.startsWith('10.') ||
+        host.startsWith('192.168.') ||
+        host.startsWith('172.16.') ||
+        host.startsWith('172.17.') ||
+        host.startsWith('172.18.') ||
+        host.startsWith('172.19.') ||
+        host.startsWith('172.20.') ||
+        host.startsWith('172.21.') ||
+        host.startsWith('172.22.') ||
+        host.startsWith('172.23.') ||
+        host.startsWith('172.24.') ||
+        host.startsWith('172.25.') ||
+        host.startsWith('172.26.') ||
+        host.startsWith('172.27.') ||
+        host.startsWith('172.28.') ||
+        host.startsWith('172.29.') ||
+        host.startsWith('172.30.') ||
+        host.startsWith('172.31.') ||
+        host.startsWith('169.254.')
+      ) {
+        return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: `SSRF Guard: Blocked invalid or unsafe feed URL: ${host}` };
+      }
+    } catch {
+      return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: `SSRF Guard: Malformed URL: ${url}` };
     }
 
     if (allowedWhitelist && allowedWhitelist.size > 0 && !allowedWhitelist.has(url)) {
-      return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: 'Feed URL not present in trusted source whitelist' };
+      return { isValid: false, errorType: 'SSRF_BLOCKED', errorMessage: 'SSRF Guard: Feed URL not registered in approved sources whitelist.' };
     }
 
     return { isValid: true, errorType: 'NONE' };
