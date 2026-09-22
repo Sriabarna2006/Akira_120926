@@ -648,6 +648,7 @@ async function runPhase9VerificationSuite(): Promise<void> {
   if (!allPassed) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase9VerificationSuite().catch((err) => {

@@ -1,4 +1,4 @@
-import { CanonicalEvent, Article, Source } from '../types/index.js';
+import { CanonicalEvent, Article, Source, CategoryCoverageReport } from '../types/index.js';
 import { SourceRepository } from '../repositories/source.repository.js';
 import { ArticleRepository } from '../repositories/article.repository.js';
 import { EventRepository } from '../repositories/event.repository.js';
@@ -8,12 +8,15 @@ import { validateArticle } from './ingestion/articleValidator.js';
 import { classifyArticle } from './ingestion/classifier.js';
 import { findMatchingCanonicalEvent } from './ingestion/eventMatcher.js';
 import { feedFetcher } from './ingestion/feedFetcher.js';
+import { quarantineManager } from './ingestion/quarantineManager.js';
+import { categoryCoverageMonitor } from './ingestion/coverageMonitor.js';
 import { RankingService } from './ranking/rankingService.js';
 
 export interface IngestionReport {
   sourcesAttempted: number;
   sourcesSucceeded: number;
   sourcesFailed: number;
+  sourcesQuarantined: number;
   articlesDiscovered: number;
   articlesAccepted: number;
   articlesRejected: number;
@@ -22,7 +25,10 @@ export interface IngestionReport {
   eventsUpdated: number;
   durationMs: number;
   timestamp: string;
+  coverageReport?: CategoryCoverageReport;
 }
+
+const INGESTION_CONCURRENCY = parseInt(process.env.INGESTION_CONCURRENCY || '5', 10);
 
 export class NewsIngestionService {
   private isSyncing = false;
@@ -31,8 +37,9 @@ export class NewsIngestionService {
 
   /**
    * Primary ingestion pipeline orchestrator.
-   * Pulls approved feeds, normalizes, validates, deduplicates, classifies,
-   * clusters canonical events, and persists to PostgreSQL.
+   * Pulls approved feeds with bounded concurrency (concurrency=5), normalizes, validates,
+   * deduplicates, classifies, clusters canonical events, evaluates source health/quarantine,
+   * and persists to PostgreSQL.
    */
   public async runIngestion(sourceFilterIds?: string[]): Promise<IngestionReport> {
     if (this.isSyncing) {
@@ -41,6 +48,7 @@ export class NewsIngestionService {
         sourcesAttempted: 0,
         sourcesSucceeded: 0,
         sourcesFailed: 0,
+        sourcesQuarantined: 0,
         articlesDiscovered: 0,
         articlesAccepted: 0,
         articlesRejected: 0,
@@ -59,6 +67,7 @@ export class NewsIngestionService {
       sourcesAttempted: 0,
       sourcesSucceeded: 0,
       sourcesFailed: 0,
+      sourcesQuarantined: 0,
       articlesDiscovered: 0,
       articlesAccepted: 0,
       articlesRejected: 0,
@@ -69,7 +78,7 @@ export class NewsIngestionService {
       timestamp: new Date().toISOString(),
     };
 
-    console.log('[NewsIngestion] Starting real-world news ingestion cycle...');
+    console.log('[NewsIngestion] Starting real-world news ingestion cycle (concurrency = 5)...');
 
     try {
       // 1. Load active registered sources from database
@@ -78,8 +87,8 @@ export class NewsIngestionService {
         sources = sources.filter((s) => sourceFilterIds.includes(s.id));
       }
 
-      // Filter to sources having configured feed URLs
-      const feedSources = sources.filter((s) => s.feedUrl && s.feedUrl.trim().length > 0);
+      // Filter to sources having configured feed URLs and not locked in quarantine
+      const feedSources = sources.filter((s) => s.feedUrl && s.feedUrl.trim().length > 0 && s.quarantineStatus !== 'QUARANTINED');
       report.sourcesAttempted = feedSources.length;
 
       // Whitelist of approved feed URLs for SSRF prevention
@@ -88,175 +97,221 @@ export class NewsIngestionService {
       // 2. Pre-fetch recent canonical events for clustering pool (past 36 hours)
       const recentEventsPool: CanonicalEvent[] = await EventRepository.findRecentEventsForMatching(undefined, undefined, 36);
 
-      // 3. Process feeds with controlled concurrency
-      for (const source of feedSources) {
-        const feedUrl = source.feedUrl as string;
-        const fetchResult = await feedFetcher.fetchFeed(feedUrl, approvedFeedUrls);
+      // 3. Process feeds with bounded concurrency chunking
+      for (let i = 0; i < feedSources.length; i += INGESTION_CONCURRENCY) {
+        const batch = feedSources.slice(i, i + INGESTION_CONCURRENCY);
 
-        if (!fetchResult.success) {
-          console.warn(`[NewsIngestion] Source "${source.name}" (${source.id}) failed: ${fetchResult.error}`);
-          await SourceRepository.updateFetchStatus(source.id, false, fetchResult.error);
-          report.sourcesFailed++;
-          continue;
-        }
+        await Promise.all(
+          batch.map(async (source) => {
+            const sourceStartTime = Date.now();
+            const feedUrl = source.feedUrl as string;
+            let sourceArticlesAccepted = 0;
+            let sourceEventsCreated = 0;
 
-        // Record successful fetch
-        await SourceRepository.updateFetchStatus(source.id, true);
-        report.sourcesSucceeded++;
-        report.articlesDiscovered += fetchResult.items.length;
+            const fetchResult = await feedFetcher.fetchFeed(feedUrl, approvedFeedUrls);
+            const responseTimeMs = Date.now() - sourceStartTime;
 
-        // Process articles for this source (top 15 newest items per cycle)
-        for (const rawItem of fetchResult.items.slice(0, 15)) {
-          const rawUrl = rawItem.link || '';
-          const normalizedUrl = normalizeArticleUrl(rawUrl);
-          const rawTitle = rawItem.title || '';
-          const cleanTitle = sanitizeText(rawTitle);
-          const rawSnippet = rawItem.contentSnippet || rawItem.content || rawItem.summary || '';
-          const cleanSnippet = sanitizeText(rawSnippet).slice(0, 1000);
-          const publishedAt = rawItem.pubDate ? new Date(rawItem.pubDate).toISOString() : new Date().toISOString();
+            if (!fetchResult.success) {
+              const errorType = fetchResult.errorType || 'UNKNOWN';
+              const errorMsg = fetchResult.error || 'Fetch error';
+              const httpStatus = fetchResult.httpStatus || 0;
 
-          // 4. Validate article schema & integrity
-          const validation = validateArticle({
-            title: cleanTitle,
-            url: normalizedUrl,
-            contentSnippet: cleanSnippet,
-            publishedAt,
-            sourceId: source.id,
-            sourceName: source.name,
-          });
+              console.warn(`[NewsIngestion] Source "${source.name}" (${source.id}) failed: ${errorMsg} (${errorType})`);
 
-          if (!validation.isValid) {
-            report.articlesRejected++;
-            continue;
-          }
+              // Record structured error log in database
+              await SourceRepository.recordSourceError(
+                source.id,
+                errorType,
+                errorMsg,
+                httpStatus,
+                responseTimeMs
+              );
 
-          // 5. Deduplication check against database
-          const alreadyExists = await ArticleRepository.existsByUrl(normalizedUrl);
-          if (alreadyExists) {
-            report.duplicatesSkipped++;
-            continue;
-          }
+              // Evaluate for quarantine
+              const quarantineDecision = quarantineManager.evaluateSource(source, errorType, errorMsg);
+              if (quarantineDecision.shouldQuarantine) {
+                console.warn(`[NewsIngestion] Quarantining source "${source.name}" (${source.id}): ${quarantineDecision.reason}`);
+                await quarantineManager.quarantine(source.id, quarantineDecision.reason, quarantineDecision.retryIntervalMinutes);
+                report.sourcesQuarantined++;
+              }
 
-          // 6. Deterministic Region & Category Classification
-          const { regionId, categoryId } = classifyArticle(
-            cleanTitle,
-            cleanSnippet,
-            source.regionId || 'world',
-            source.categoryId || 'other'
-          );
-
-          // 7. Canonical Event Matching
-          const matchResult = findMatchingCanonicalEvent(
-            cleanTitle,
-            cleanSnippet,
-            regionId,
-            categoryId,
-            publishedAt,
-            recentEventsPool
-          );
-
-          // Generate stable article ID
-          const rawArtHash = `${source.id}_${normalizedUrl}`;
-          let hashVal = 0;
-          for (let i = 0; i < rawArtHash.length; i++) {
-            hashVal = (hashVal << 5) - hashVal + rawArtHash.charCodeAt(i);
-            hashVal |= 0;
-          }
-          const articleId = `art_${Math.abs(hashVal).toString(36)}`;
-
-          if (matchResult.isMatch && matchResult.matchedEvent) {
-            // Corroborate existing canonical event
-            const matchedEvent = matchResult.matchedEvent;
-
-            // Persist raw article linked to existing event
-            const createdArticle = await ArticleRepository.create({
-              id: articleId,
-              sourceId: source.id,
-              eventId: matchedEvent.id,
-              title: cleanTitle,
-              url: normalizedUrl,
-              contentSnippet: cleanSnippet,
-              publishedAt,
-              regionId,
-              categoryId,
-            });
-
-            // Attach source & update canonical event
-            await EventRepository.attachArticleToEvent(
-              matchedEvent.id,
-              createdArticle,
-              source.name,
-              source.tier || 2
-            );
-
-            report.eventsUpdated++;
-            report.articlesAccepted++;
-          } else {
-            // Create new canonical event
-            const rawEvtHash = `${regionId}_${categoryId}_${cleanTitle.toLowerCase().slice(0, 40)}`;
-            let evtHash = 0;
-            for (let i = 0; i < rawEvtHash.length; i++) {
-              evtHash = (evtHash << 5) - evtHash + rawEvtHash.charCodeAt(i);
-              evtHash |= 0;
+              report.sourcesFailed++;
+              return;
             }
-            const eventId = `evt_${regionId.replace('-', '_')}_${Math.abs(evtHash).toString(36)}`;
 
-            const hoursAgo = Math.max(0, (Date.now() - new Date(publishedAt).getTime()) / 3600000);
-            const urgencyLabel = hoursAgo <= 2 ? 'BREAKING' : hoursAgo <= 12 ? 'TRENDING' : 'IMPORTANT';
+            report.sourcesSucceeded++;
+            report.articlesDiscovered += fetchResult.items.length;
 
-            const newEvent: CanonicalEvent = {
-              id: eventId,
-              title: cleanTitle,
-              summary: cleanSnippet || cleanTitle,
-              regionId,
-              categoryId,
-              urgencyLabel,
-              importanceScore: 75,
-              velocityScore: 60,
-              finalRankScore: 70,
-              whyItMatters: undefined,
-              firstPublishedAt: publishedAt,
-              lastUpdatedAt: publishedAt,
-              sourceCount: 1,
-              lifecycleStatus: 'INITIAL_REPORT',
-              metadata: {
-                initialSource: source.name,
-                sourceTier: source.tier,
-              },
-              createdAt: publishedAt,
-            };
+            // Process articles for this source (top 15 newest items per cycle)
+            for (const rawItem of fetchResult.items.slice(0, 15)) {
+              const rawUrl = rawItem.link || '';
+              const normalizedUrl = normalizeArticleUrl(rawUrl);
+              const rawTitle = rawItem.title || '';
+              const cleanTitle = sanitizeText(rawTitle);
+              const rawSnippet = rawItem.contentSnippet || rawItem.content || rawItem.summary || '';
+              const cleanSnippet = sanitizeText(rawSnippet).slice(0, 1000);
+              const publishedAt = rawItem.pubDate ? new Date(rawItem.pubDate).toISOString() : new Date().toISOString();
 
-            const createdEvent = await EventRepository.create(newEvent);
+              // 4. Validate article schema & integrity
+              const validation = validateArticle({
+                title: cleanTitle,
+                url: normalizedUrl,
+                contentSnippet: cleanSnippet,
+                publishedAt,
+                sourceId: source.id,
+                sourceName: source.name,
+              });
 
-            // Persist raw article linked to new event
-            const createdArticle = await ArticleRepository.create({
-              id: articleId,
-              sourceId: source.id,
-              eventId: createdEvent.id,
-              title: cleanTitle,
-              url: normalizedUrl,
-              contentSnippet: cleanSnippet,
-              publishedAt,
-              regionId,
-              categoryId,
+              if (!validation.isValid) {
+                report.articlesRejected++;
+                continue;
+              }
+
+              // 5. Deduplication check against database
+              const alreadyExists = await ArticleRepository.existsByUrl(normalizedUrl);
+              if (alreadyExists) {
+                report.duplicatesSkipped++;
+                continue;
+              }
+
+              // 6. Deterministic Region & Category Classification
+              const { regionId, categoryId } = classifyArticle(
+                cleanTitle,
+                cleanSnippet,
+                source.regionId || 'world',
+                source.categoryId || 'other'
+              );
+
+              // 7. Multi-Signal Canonical Event Matching with False-Merge Guardrails
+              const matchResult = findMatchingCanonicalEvent(
+                cleanTitle,
+                cleanSnippet,
+                regionId,
+                categoryId,
+                publishedAt,
+                recentEventsPool
+              );
+
+              // Generate stable article ID
+              const rawArtHash = `${source.id}_${normalizedUrl}`;
+              let hashVal = 0;
+              for (let j = 0; j < rawArtHash.length; j++) {
+                hashVal = (hashVal << 5) - hashVal + rawArtHash.charCodeAt(j);
+                hashVal |= 0;
+              }
+              const articleId = `art_${Math.abs(hashVal).toString(36)}`;
+
+              if (matchResult.isMatch && matchResult.matchedEvent) {
+                // Corroborate existing canonical event
+                const matchedEvent = matchResult.matchedEvent;
+
+                // Persist raw article linked to existing event
+                const createdArticle = await ArticleRepository.create({
+                  id: articleId,
+                  sourceId: source.id,
+                  eventId: matchedEvent.id,
+                  title: cleanTitle,
+                  url: normalizedUrl,
+                  contentSnippet: cleanSnippet,
+                  publishedAt,
+                  regionId,
+                  categoryId,
+                });
+
+                // Attach source & update canonical event
+                await EventRepository.attachArticleToEvent(
+                  matchedEvent.id,
+                  createdArticle,
+                  source.name,
+                  source.tier || 2
+                );
+
+                report.eventsUpdated++;
+                report.articlesAccepted++;
+                sourceArticlesAccepted++;
+              } else {
+                // Create new canonical event
+                const rawEvtHash = `${regionId}_${categoryId}_${cleanTitle.toLowerCase().slice(0, 40)}`;
+                let evtHash = 0;
+                for (let k = 0; k < rawEvtHash.length; k++) {
+                  evtHash = (evtHash << 5) - evtHash + rawEvtHash.charCodeAt(k);
+                  evtHash |= 0;
+                }
+                const eventId = `evt_${regionId.replace('-', '_')}_${Math.abs(evtHash).toString(36)}`;
+
+                const hoursAgo = Math.max(0, (Date.now() - new Date(publishedAt).getTime()) / 3600000);
+                const urgencyLabel = hoursAgo <= 2 ? 'BREAKING' : hoursAgo <= 12 ? 'TRENDING' : 'IMPORTANT';
+
+                const newEvent: CanonicalEvent = {
+                  id: eventId,
+                  title: cleanTitle,
+                  summary: cleanSnippet || cleanTitle,
+                  regionId,
+                  categoryId,
+                  urgencyLabel,
+                  importanceScore: 75,
+                  velocityScore: 60,
+                  finalRankScore: 70,
+                  whyItMatters: undefined,
+                  firstPublishedAt: publishedAt,
+                  lastUpdatedAt: publishedAt,
+                  sourceCount: 1,
+                  lifecycleStatus: 'INITIAL_REPORT',
+                  metadata: {
+                    initialSource: source.name,
+                    sourceTier: source.tier,
+                    matchClassification: matchResult.classification,
+                  },
+                  createdAt: publishedAt,
+                };
+
+                const createdEvent = await EventRepository.create(newEvent);
+
+                // Persist raw article linked to new event
+                const createdArticle = await ArticleRepository.create({
+                  id: articleId,
+                  sourceId: source.id,
+                  eventId: createdEvent.id,
+                  title: cleanTitle,
+                  url: normalizedUrl,
+                  contentSnippet: cleanSnippet,
+                  publishedAt,
+                  regionId,
+                  categoryId,
+                });
+
+                // Attach initial event source record
+                await EventRepository.attachArticleToEvent(
+                  createdEvent.id,
+                  createdArticle,
+                  source.name,
+                  source.tier || 2
+                );
+
+                // Add new event to matching pool for subsequent items
+                recentEventsPool.unshift(createdEvent);
+
+                report.eventsCreated++;
+                report.articlesAccepted++;
+                sourceArticlesAccepted++;
+                sourceEventsCreated++;
+              }
+            }
+
+            // Record successful source health & metrics
+            await SourceRepository.updateSourceHealth(source.id, {
+              success: true,
+              articlesCount: sourceArticlesAccepted,
+              eventsCount: sourceEventsCreated,
+              responseTimeMs,
+              httpStatus: 200,
             });
-
-            // Attach initial event source record
-            await EventRepository.attachArticleToEvent(
-              createdEvent.id,
-              createdArticle,
-              source.name,
-              source.tier || 2
-            );
-
-            // Add new event to matching pool for subsequent items
-            recentEventsPool.unshift(createdEvent);
-
-            report.eventsCreated++;
-            report.articlesAccepted++;
-          }
-        }
+          })
+        );
       }
+
+      // 8. Generate Category Coverage Report
+      report.coverageReport = await categoryCoverageMonitor.generateCoverageReport();
     } catch (err: any) {
       console.error('[NewsIngestion] Critical pipeline failure:', err.message);
     } finally {
@@ -268,9 +323,9 @@ export class NewsIngestionService {
       console.log(
         `[NewsIngestion] Ingestion run completed in ${report.durationMs}ms. ` +
         `Attempted: ${report.sourcesAttempted}, Succeeded: ${report.sourcesSucceeded}, ` +
-        `Failed: ${report.sourcesFailed}, Discovered: ${report.articlesDiscovered}, ` +
-        `Accepted: ${report.articlesAccepted}, Dupes: ${report.duplicatesSkipped}, ` +
-        `Events Created: ${report.eventsCreated}, Events Updated: ${report.eventsUpdated}`
+        `Failed: ${report.sourcesFailed}, Quarantined: ${report.sourcesQuarantined}, ` +
+        `Discovered: ${report.articlesDiscovered}, Accepted: ${report.articlesAccepted}, ` +
+        `Dupes: ${report.duplicatesSkipped}, Events Created: ${report.eventsCreated}, Events Updated: ${report.eventsUpdated}`
       );
     }
 
@@ -282,6 +337,30 @@ export class NewsIngestionService {
       isSyncing: this.isSyncing,
       lastSyncTime: this.lastSyncTime ? this.lastSyncTime.toISOString() : null,
       lastReport: this.lastReport,
+    };
+  }
+
+  /**
+   * Generates a complete operational health and diagnostic telemetry report.
+   */
+  public async getOperationalHealth() {
+    const sourceHealth = await SourceRepository.getSourceHealthReport();
+    const quarantinedSources = await quarantineManager.getQuarantined();
+    const coverage = await categoryCoverageMonitor.generateCoverageReport();
+
+    return {
+      lastSyncTime: this.lastSyncTime ? this.lastSyncTime.toISOString() : null,
+      lastSyncDurationMs: this.lastReport?.durationMs || 0,
+      isSyncing: this.isSyncing,
+      totalArticlesDiscovered: this.lastReport?.articlesDiscovered || 0,
+      totalArticlesAccepted: this.lastReport?.articlesAccepted || 0,
+      totalDuplicatesSuppressed: this.lastReport?.duplicatesSkipped || 0,
+      totalEventsCreated: this.lastReport?.eventsCreated || 0,
+      totalEventsUpdated: this.lastReport?.eventsUpdated || 0,
+      sourcesHealth: sourceHealth,
+      quarantinedCount: quarantinedSources.length,
+      quarantinedList: quarantinedSources,
+      coverage,
     };
   }
 
@@ -343,4 +422,3 @@ export class NewsIngestionService {
 
 export type { CanonicalEvent } from '../types/index.js';
 export const newsIngestionService = new NewsIngestionService();
-

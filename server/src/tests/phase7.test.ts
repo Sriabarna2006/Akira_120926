@@ -567,6 +567,7 @@ async function runPhase7VerificationSuite(): Promise<void> {
   if (!allPassed) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase7VerificationSuite().catch((err) => {

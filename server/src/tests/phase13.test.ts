@@ -1096,6 +1096,7 @@ async function runPhase13VerificationSuite(): Promise<void> {
   if (passedCount < results.length) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase13VerificationSuite().catch((err) => {

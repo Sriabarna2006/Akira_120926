@@ -637,6 +637,7 @@ async function runPhase8VerificationSuite(): Promise<void> {
   if (!allPassed) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase8VerificationSuite().catch((err) => {

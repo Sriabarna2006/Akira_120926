@@ -826,6 +826,7 @@ async function runPhase12VerificationSuite(): Promise<void> {
   if (passedCount !== results.length) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase12VerificationSuite().catch((err) => {

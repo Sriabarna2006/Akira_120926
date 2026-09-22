@@ -1,5 +1,7 @@
 import Parser from 'rss-parser';
 import { isSafeUrl } from '../../utils/sanitize.js';
+import { SourceErrorType } from '../../types/index.js';
+import { FeedValidator } from './feedValidator.js';
 
 export interface RawFeedItem {
   title?: string;
@@ -16,6 +18,8 @@ export interface FetchFeedResult {
   success: boolean;
   items: RawFeedItem[];
   error?: string;
+  errorType?: SourceErrorType;
+  httpStatus?: number;
   durationMs: number;
 }
 
@@ -44,20 +48,13 @@ export class FeedFetcher {
     const startTime = Date.now();
 
     // 1. SSRF & URL Validation
-    if (!feedUrl || typeof feedUrl !== 'string' || !isSafeUrl(feedUrl)) {
+    const urlCheck = FeedValidator.validateUrl(feedUrl, allowedUrls);
+    if (!urlCheck.isValid) {
       return {
         success: false,
         items: [],
-        error: `SSRF Guard: Blocked invalid or unsafe feed URL: ${feedUrl}`,
-        durationMs: Date.now() - startTime,
-      };
-    }
-
-    if (allowedUrls && allowedUrls.size > 0 && !allowedUrls.has(feedUrl)) {
-      return {
-        success: false,
-        items: [],
-        error: `SSRF Guard: Feed URL not registered in approved sources whitelist.`,
+        error: urlCheck.errorMessage,
+        errorType: urlCheck.errorType,
         durationMs: Date.now() - startTime,
       };
     }
@@ -65,6 +62,8 @@ export class FeedFetcher {
     // 2. Fetch with strict timeout race and retries
     let attempt = 0;
     let lastError = 'Unknown fetch error';
+    let lastErrorType: SourceErrorType = 'UNKNOWN';
+    let lastHttpStatus = 0;
 
     while (attempt <= MAX_RETRIES) {
       try {
@@ -76,16 +75,19 @@ export class FeedFetcher {
         const feed = await Promise.race([fetchPromise, timeoutPromise]);
         const durationMs = Date.now() - startTime;
 
-        if (!feed || !Array.isArray(feed.items)) {
+        // Structural validation
+        const structureCheck = FeedValidator.validateFeedStructure(feed);
+        if (!structureCheck.isValid) {
           return {
             success: false,
             items: [],
-            error: 'Feed responded without valid RSS/Atom items list.',
+            error: structureCheck.errorMessage,
+            errorType: structureCheck.errorType,
             durationMs,
           };
         }
 
-        const items: RawFeedItem[] = feed.items.map((item) => ({
+        const items: RawFeedItem[] = feed.items.map((item: any) => ({
           title: item.title,
           link: item.link,
           pubDate: item.pubDate || (item as any).isoDate || (item as any).published,
@@ -99,11 +101,19 @@ export class FeedFetcher {
         return {
           success: true,
           items,
+          errorType: 'NONE',
+          httpStatus: 200,
           durationMs,
         };
-      } catch (err) {
+      } catch (err: any) {
         attempt++;
-        lastError = (err as Error).message || 'Network error';
+        const netErr = FeedValidator.classifyNetworkError(err);
+        lastError = netErr.errorMessage;
+        lastErrorType = netErr.errorType;
+
+        if (err && typeof err === 'object' && 'statusCode' in err) {
+          lastHttpStatus = err.statusCode;
+        }
 
         if (attempt <= MAX_RETRIES) {
           const backoffDelay = Math.min(1000, 200 * Math.pow(2, attempt));
@@ -116,6 +126,8 @@ export class FeedFetcher {
       success: false,
       items: [],
       error: `Failed after ${MAX_RETRIES + 1} attempts. Reason: ${lastError}`,
+      errorType: lastErrorType,
+      httpStatus: lastHttpStatus,
       durationMs: Date.now() - startTime,
     };
   }

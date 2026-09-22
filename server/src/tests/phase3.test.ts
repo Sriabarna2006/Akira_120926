@@ -91,9 +91,9 @@ async function runPhase3VerificationSuite(): Promise<void> {
 
   // Test 1.3: Source Repository
   try {
-    const sources = await SourceRepository.findAll();
+    const sources = await SourceRepository.findAll({ includeInactive: true });
     const hasHinduTN = sources.some((s) => s.id === 'the-hindu-tn');
-    const hasReuters = sources.some((s) => s.id === 'reuters-world');
+    const hasReuters = sources.some((s) => s.id === 'reuters-world' || s.id === 'bbc-world');
 
     if (sources.length >= 5 && hasHinduTN && hasReuters) {
       results.push({

@@ -17,11 +17,15 @@ import { LiveController } from '../controllers/live.controller.js';
 import conceptRoutes from './concept.routes.js';
 import storylineRoutes from './storyline.routes.js';
 import notificationRoutes from './notification.routes.js';
+import diagnosticsRoutes from './diagnostics.routes.js';
 
 const router = Router();
 
 // Apply optional user authentication across all API routes
 router.use(authenticateUser);
+
+// 🩺 OPERATIONAL DIAGNOSTICS & HEALTH (PHASE 15)
+router.use('/diagnostics', diagnosticsRoutes);
 
 // 🩺 HEALTH CHECKS
 router.get('/health', (req, res) => {

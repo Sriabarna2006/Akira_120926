@@ -69,6 +69,10 @@ export interface Category {
   createdAt: string;
 }
 
+export type SourceHealthStatus = 'HEALTHY' | 'DEGRADED' | 'DOWN' | 'PAUSED' | 'STALE' | 'FAILING' | 'DISABLED' | 'QUARANTINED';
+
+export type SourceType = 'WIRE' | 'NATIONAL' | 'REGIONAL' | 'SPECIALIST' | 'GOVERNMENT' | 'OFFICIAL' | 'TECHNICAL' | 'AGGREGATOR' | 'OTHER';
+
 export interface Source {
   id: string;
   name: string;
@@ -76,20 +80,61 @@ export interface Source {
   feedUrl?: string;
   regionId?: string;
   categoryId?: string;
+  country?: string;
+  language?: string;
   tier: number;
   credibilityScore: number;
   conglomerateId?: string;
   isActive: boolean;
   sourceType?: SourceType;
+  authorityLevel?: 'OFFICIAL' | 'PEER_REVIEWED' | 'TIER1_WIRE' | 'NATIONAL_PAPER' | 'REGIONAL_PRESS' | 'SPECIALIST';
   consecutiveFailures?: number;
   specialization?: string;
   healthStatus?: SourceHealthStatus;
+  expectedFreshnessHours?: number;
   lastSuccessfulFetch?: string;
   lastFailedFetch?: string;
+  lastErrorMessage?: string;
+  lastErrorType?: SourceErrorType;
+  quarantineStatus?: 'ACTIVE' | 'QUARANTINED' | 'DISABLED';
+  lastHttpStatus?: number;
+  articlesIngestedCount?: number;
+  eventsProducedCount?: number;
+  responseTimeMs?: number;
   failureCount: number;
   updateFrequencyMinutes: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SourceRegistryHealthSummary {
+  totalSources: number;
+  activeSources: number;
+  healthySources: number;
+  degradedSources: number;
+  staleSources: number;
+  failingSources: number;
+  disabledSources: number;
+  staleSourceList: {
+    id: string;
+    name: string;
+    lastSuccessfulFetch?: string;
+    staleDurationHours: number;
+    healthStatus: SourceHealthStatus;
+  }[];
+  generatedAt: string;
+}
+
+export interface IngestionHealthStats {
+  lastSyncTime: string | null;
+  lastSyncDurationMs: number;
+  isSyncing: boolean;
+  totalArticlesDiscovered: number;
+  totalArticlesAccepted: number;
+  totalDuplicatesSuppressed: number;
+  totalEventsCreated: number;
+  totalEventsUpdated: number;
+  sourcesHealth: SourceRegistryHealthSummary;
 }
 
 export interface EventSource {
@@ -635,16 +680,6 @@ export interface ConceptKnowledgeStatus {
 // PHASE 10: TRUST, EVIDENCE & SOURCE INTELLIGENCE TYPES
 // ============================================================================
 
-export type SourceType =
-  | 'GOVERNMENT'
-  | 'OFFICIAL'
-  | 'WIRE'
-  | 'NATIONAL'
-  | 'REGIONAL'
-  | 'SPECIALIST'
-  | 'TECHNICAL'
-  | 'OTHER';
-
 export type EvidenceType =
   | 'PRIMARY'
   | 'INDEPENDENT_REPORTING'
@@ -661,7 +696,6 @@ export type ConfidenceState =
 
 export type ConflictSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
 export type ConflictStatus = 'UNRESOLVED' | 'ACKNOWLEDGED' | 'RESOLVED';
-export type SourceHealthStatus = 'HEALTHY' | 'DEGRADED' | 'DOWN' | 'PAUSED';
 
 export interface EvidenceRecord {
   id: string;
@@ -1481,10 +1515,112 @@ export interface NotificationDecisionResult {
   details?: Record<string, any>;
 }
 
+// ============================================================================
+// PHASE 16: PRODUCTION NEWS RELIABILITY, SOURCE HEALTH & SEMANTIC INGESTION
+// ============================================================================
 
+export type SourceErrorType =
+  | 'TIMEOUT'
+  | 'DNS_ERROR'
+  | 'HTTP_403'
+  | 'HTTP_404'
+  | 'HTTP_429'
+  | 'HTTP_500'
+  | 'HTTP_5XX'
+  | 'UNAUTHORIZED'
+  | 'XML_MALFORMED'
+  | 'MALFORMED_XML'
+  | 'SCHEMA_VIOLATION'
+  | 'EMPTY_FEED'
+  | 'SSRF_BLOCKED'
+  | 'TLS_ERROR'
+  | 'INVALID_RSS'
+  | 'INVALID_ATOM'
+  | 'UNKNOWN'
+  | 'NONE';
 
+export const DatabaseConnectionState = {
+  CONNECTED: 'CONNECTED',
+  DEGRADED: 'DEGRADED',
+  CIRCUIT_OPEN: 'CIRCUIT_OPEN',
+  DISCONNECTED: 'DISCONNECTED',
+  FALLBACK_MEMORY: 'FALLBACK_MEMORY',
+} as const;
+export type DatabaseConnectionState = (typeof DatabaseConnectionState)[keyof typeof DatabaseConnectionState];
 
+export const CircuitBreakerState = {
+  CLOSED: 'CLOSED',
+  FAILURES: 'FAILURES',
+  OPEN: 'OPEN',
+  HALF_OPEN: 'HALF_OPEN',
+} as const;
+export type CircuitBreakerState = (typeof CircuitBreakerState)[keyof typeof CircuitBreakerState];
 
+export const DatabaseErrorClassification = {
+  NETWORK_FAILURE: 'NETWORK_FAILURE',
+  SCHEMA_FAILURE: 'SCHEMA_FAILURE',
+  CONSTRAINT_FAILURE: 'CONSTRAINT_FAILURE',
+  VALIDATION_FAILURE: 'VALIDATION_FAILURE',
+  QUERY_FAILURE: 'QUERY_FAILURE',
+} as const;
+export type DatabaseErrorClassification = (typeof DatabaseErrorClassification)[keyof typeof DatabaseErrorClassification];
 
+export interface FeedQuarantineRecord {
+  sourceId: string;
+  sourceName?: string;
+  quarantinedAt: string;
+  quarantineReason: string;
+  retryIntervalMinutes: number;
+  nextRetryAt: string;
+  consecutiveQuarantineCount: number;
+  updatedAt?: string;
+}
 
+export interface CategoryCoverageReport {
+  totalCategories: number;
+  coveredCategories: number;
+  sparseCategories: string[];
+  uncoveredCategories: string[];
+  coveragePercentage: number;
+  perCategoryCounts: Record<string, number>;
+  generatedAt: string;
+}
+
+export interface SystemHealthStatus {
+  overallStatus: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL';
+  database: {
+    state: string;
+    circuitBreakerState: string;
+    totalPoolConnections: number;
+    activePoolConnections: number;
+    lastErrorClassification: string;
+  };
+  sources: {
+    total: number;
+    healthy: number;
+    degraded: number;
+    failing: number;
+    quarantined: number;
+    disabled: number;
+  };
+  ingestion: {
+    isSyncing: boolean;
+    lastSyncTime: string | null;
+    lastDurationMs: number;
+    activeEventsCount: number;
+  };
+  coverage: CategoryCoverageReport;
+  timestamp: string;
+  version: string;
+}
+
+export interface EmbeddingVector {
+  eventId?: string;
+  provider: string;
+  modelName?: string;
+  model?: string;
+  dimensions: number;
+  vector: number[];
+  createdAt?: string;
+}
 

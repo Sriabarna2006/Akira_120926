@@ -324,7 +324,8 @@ export class ArticleRepository {
             content_snippet AS "contentSnippet", published_at AS "publishedAt", 
             region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
         `;
-        const rows = await query<Article>(insertSql, [
+        
+        let rows = await query<Article>(insertSql, [
           newArticle.id,
           newArticle.sourceId || null,
           newArticle.eventId || null,
@@ -335,12 +336,29 @@ export class ArticleRepository {
           newArticle.regionId || null,
           newArticle.categoryId || null,
         ]);
+
+        // If insertion failed due to FK constraint on unknown source_id, fallback with source_id=null
+        if ((!rows || rows.length === 0) && newArticle.sourceId) {
+          console.warn(`[ArticleRepository] Retrying article insertion with source_id=null fallback for: ${newArticle.url}`);
+          rows = await query<Article>(insertSql, [
+            newArticle.id,
+            null,
+            newArticle.eventId || null,
+            newArticle.title,
+            newArticle.url,
+            newArticle.contentSnippet || null,
+            newArticle.publishedAt,
+            newArticle.regionId || null,
+            newArticle.categoryId || null,
+          ]);
+        }
+
         if (rows && rows.length > 0) {
           return rows[0];
         }
       }
-    } catch (err) {
-      console.warn('[ArticleRepository] DB insert/update error:', (err as Error).message);
+    } catch (err: any) {
+      console.warn('[ArticleRepository] DB insert/update error:', err.message);
     }
 
     inMemoryArticles = inMemoryArticles.filter((a) => a.url !== newArticle.url && a.id !== newArticle.id);

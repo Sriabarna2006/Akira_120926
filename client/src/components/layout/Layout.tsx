@@ -4,6 +4,7 @@ import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { BreakingNewsTicker } from '../common/BreakingNewsTicker';
+import { PWAInstallBanner } from '../common/PWAInstallBanner';
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,6 +73,9 @@ export const Layout: React.FC = () => {
 
       {/* Mobile Bottom Navigation for Phone and Tablet Touch Screens */}
       <MobileBottomNav />
+
+      {/* PWA Native Install Banner */}
+      <PWAInstallBanner />
     </div>
   );
 };

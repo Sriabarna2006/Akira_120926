@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Bookmark, Menu, LogIn, LogOut, Shield, Bell } from 'lucide-react';
+import { Sparkles, Bookmark, Menu, LogIn, LogOut, Shield, Bell, Activity } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { SearchBar } from '../common/SearchBar';
 import { NotificationsModal } from '../common/NotificationsModal';
+import { SystemHealthModal } from '../common/SystemHealthModal';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface NavbarProps {
@@ -12,6 +13,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isHealthOpen, setIsHealthOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, openAuthModal, signOut } = useAuth();
@@ -83,8 +85,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             <SearchBar onSearch={handleSearch} compact />
           </div>
 
-          {/* Right: Quick actions, Theme Toggle, Notifications, Auth */}
+          {/* Right: Quick actions, Theme Toggle, System Health, Notifications, Auth */}
           <div className="flex items-center gap-1.5 sm:gap-2.5">
+            {/* System Health Diagnostics Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsHealthOpen(true)}
+              className="p-2 rounded-xl text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 dark:text-slate-400 dark:hover:text-cyan-400 dark:hover:bg-slate-800/80 transition-colors"
+              title="System Diagnostics & Reliability"
+              aria-label="View system health"
+            >
+              <Activity className="h-4 w-4" />
+            </button>
+
             {/* Theme Toggle (Bright / Dark / Default Option) */}
             <ThemeToggle />
 
@@ -160,6 +173,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
       />
+
+      {/* System Health Diagnostics Modal */}
+      <SystemHealthModal
+        isOpen={isHealthOpen}
+        onClose={() => setIsHealthOpen(false)}
+      />
     </>
   );
 };
+

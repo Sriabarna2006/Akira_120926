@@ -19,9 +19,9 @@ export class NotificationDecisionService {
   public static async evaluateCandidate(
     userPreference: NotificationPreference,
     candidate: NotificationCandidate,
-    options: { checkDedupe?: boolean; checkDailyCap?: boolean } = {}
+    options: { checkDedupe?: boolean; checkDailyCap?: boolean; currentTime?: Date } = {}
   ): Promise<NotificationDecisionResult> {
-    const { checkDedupe = true, checkDailyCap = true } = options;
+    const { checkDedupe = true, checkDailyCap = true, currentTime } = options;
 
     // 1. Global User Notification Enabled Check
     if (!userPreference.enabled) {
@@ -81,7 +81,8 @@ export class NotificationDecisionService {
     const isInQuiet = this.isTimeInQuietHours(
       userPreference.quietHoursStart,
       userPreference.quietHoursEnd,
-      userPreference.timezone
+      userPreference.timezone,
+      currentTime
     );
 
     if (isInQuiet && !candidate.isBypassQuietHours && candidate.priority !== 'CRITICAL') {

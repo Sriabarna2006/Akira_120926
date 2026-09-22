@@ -12,10 +12,13 @@ import { eventService } from '../services/eventService';
 import { CanonicalEvent } from '../types';
 import { BriefCard } from '../components/cards/BriefCard';
 import { LoadingState } from '../components/common/LoadingState';
+import { offlineCache } from '../services/offlineCache';
+import { WifiOff, Clock } from 'lucide-react';
 
 export const DailyBriefPage: React.FC = () => {
   const [briefs, setBriefs] = useState<CanonicalEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [offlineStatus, setOfflineStatus] = useState<{ isOffline: boolean; freshnessLabel: string } | null>(null);
 
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -29,70 +32,24 @@ export const DailyBriefPage: React.FC = () => {
       setLoading(true);
       try {
         const data = await eventService.getDailyBrief();
-        if (data.length > 0) {
+        if (data && data.length > 0) {
           setBriefs(data);
+          setOfflineStatus(null);
+          await offlineCache.set('daily_brief', data);
         } else {
-          // Structured Daily Brief UI Shell Placeholder
-          setBriefs([
-            {
-              id: 'story-1',
-              title: 'Global Central Banks Shift Monetary Policy Stance: Navigating Disinflation and Growth',
-              summary: 'Monetary policy committees across major economies announce rate corridor recalibrations as structural price pressures ease, altering corporate borrowing costs and mortgage rates worldwide.',
-              category: 'Economy & Money',
-              region: 'World',
-              importanceLabel: 'IMPORTANT',
-              importanceScore: 95,
-              finalRankScore: 98,
-              whyItMatters: 'Directly influences personal home loans, commercial capital expenditure, currency exchange volatility, and global consumer confidence.',
-              estimatedReadTime: '4 min read',
-              relatedConcepts: ['Monetary Policy', 'Inflation Hedging', 'Central Bank Mandates', 'Interest Rate Parity'],
-              firstPublishedAt: new Date().toISOString(),
-              lastUpdatedAt: new Date().toISOString(),
-              sourceCount: 3,
-              sources: [
-                { name: 'Financial Times', url: 'https://ft.com', publishedAt: new Date().toISOString(), tier: 1 },
-                { name: 'Reuters', url: 'https://reuters.com', publishedAt: new Date().toISOString(), tier: 1 },
-              ],
-            },
-            {
-              id: 'story-2',
-              title: 'European Union Enforces Landmark AI Act: Strict Compliance for High-Risk Systems',
-              summary: 'The comprehensive artificial intelligence governance framework takes effect, classifying AI models by societal risk and mandating algorithmic auditing for foundational systems.',
-              category: 'AI & Technology',
-              region: 'World',
-              importanceLabel: 'IMPORTANT',
-              importanceScore: 91,
-              finalRankScore: 93,
-              whyItMatters: 'Establishes the worldwide legal benchmark for AI safety, algorithmic transparency, intellectual property rights, and commercial deployments.',
-              estimatedReadTime: '5 min read',
-              relatedConcepts: ['AI Governance', 'Algorithmic Auditing', 'Risk Classification', 'Data Privacy'],
-              firstPublishedAt: new Date().toISOString(),
-              lastUpdatedAt: new Date().toISOString(),
-              sourceCount: 2,
-              sources: [
-                { name: 'MIT Technology Review', url: 'https://technologyreview.com', publishedAt: new Date().toISOString(), tier: 1 },
-              ],
-            },
-            {
-              id: 'story-3',
-              title: 'India Advances High-Precision Semiconductor Mission with Mega State Hubs',
-              summary: 'Federal and regional industrial corridors clear incentive packages for OSAT facilities and silicon fabrication units, reducing dependency on external chip supply chains.',
-              category: 'Career & Industry',
-              region: 'India',
-              importanceLabel: 'IMPORTANT',
-              importanceScore: 88,
-              finalRankScore: 90,
-              whyItMatters: 'Builds long-term sovereign hardware resilience and anchors engineering talent within domestic high-tech manufacturing ecosystems.',
-              estimatedReadTime: '3 min read',
-              relatedConcepts: ['Semiconductor Fabrication', 'OSAT Assembly', 'Supply Chain Sovereignty'],
-              firstPublishedAt: new Date().toISOString(),
-              lastUpdatedAt: new Date().toISOString(),
-              sourceCount: 2,
-              sources: [
-                { name: 'BusinessLine', url: 'https://thehindubusinessline.com', publishedAt: new Date().toISOString(), tier: 1 },
-              ],
-            },
-          ]);
+          // Check local offline cache
+          const cached = await offlineCache.get<CanonicalEvent[]>('daily_brief');
+          if (cached && cached.data.length > 0) {
+            setBriefs(cached.data);
+            setOfflineStatus({ isOffline: cached.isOffline, freshnessLabel: cached.freshnessLabel });
+          }
+        }
+      } catch (err) {
+        // Fallback to offline cache on network error
+        const cached = await offlineCache.get<CanonicalEvent[]>('daily_brief');
+        if (cached && cached.data.length > 0) {
+          setBriefs(cached.data);
+          setOfflineStatus({ isOffline: true, freshnessLabel: cached.freshnessLabel });
         }
       } finally {
         setLoading(false);
@@ -104,6 +61,21 @@ export const DailyBriefPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      {/* Offline Mode Banner */}
+      {offlineStatus && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between gap-3 text-amber-300 text-xs animate-fade-in">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Offline Mode:</strong> Displaying saved daily intelligence briefing.
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-amber-400/80 font-mono">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{offlineStatus.freshnessLabel}</span>
+          </div>
+        </div>
+      )}
       
       {/* 1. Daily Brief Editorial Header */}
       <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-cyan-50 via-white to-indigo-50 dark:from-cyan-950/70 dark:via-slate-900 dark:to-indigo-950/60 border border-cyan-200 dark:border-cyan-500/30 shadow-sm dark:shadow-glass">

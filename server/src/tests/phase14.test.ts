@@ -184,14 +184,18 @@ async function runPhase14VerificationSuite(): Promise<void> {
     const conflictDecision = await NotificationDecisionService.evaluateCandidate(samplePref, conflictCandidate);
     record(14, 'Evidence Conflicts Suppress Notification Push', !conflictDecision.shouldNotify && conflictDecision.rejectionReason === 'EVIDENCE_CONFLICT');
 
-    // Test 15: Major Storyline Turning Point Eligible
+    // Test 15: Major Storyline Turning Point Eligible (evaluated during daytime outside quiet hours)
     const majorCandidate = NotificationDecisionService.buildMajorUpdateCandidate(
       userA,
       { id: 'evt_semi_policy', title: 'Semiconductor Subsidies Approved', importanceScore: 88 },
       { title: 'Official Cabinet Clearance' },
       { id: 'stl_semi_2026', title: 'India Semiconductor Mission' }
     );
-    const majorDecision = await NotificationDecisionService.evaluateCandidate(samplePref, majorCandidate);
+    const majorDecision = await NotificationDecisionService.evaluateCandidate(
+      samplePref,
+      majorCandidate,
+      { currentTime: new Date('2026-09-22T14:30:00Z') }
+    );
     record(15, 'Major Storyline Turning Point Notification Eligible', majorDecision.shouldNotify === true);
 
     // Test 16: User Type Preference Disabling (Type disabled suppresses push)
@@ -370,6 +374,7 @@ async function runPhase14VerificationSuite(): Promise<void> {
   if (passedCount !== totalCount) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runPhase14VerificationSuite().catch((err) => {

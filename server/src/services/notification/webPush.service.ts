@@ -29,10 +29,17 @@ export class WebPushService {
     const envPriv = process.env.VAPID_PRIVATE_KEY;
     const envSubject = process.env.VAPID_SUBJECT;
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     if (envPub && envPriv) {
       this.vapidPublicKey = envPub;
       this.vapidPrivateKey = envPriv;
       this.vapidSubject = envSubject || 'mailto:support@akira.ai';
+    } else if (isProduction) {
+      console.error(
+        '[WebPushService] CRITICAL PRODUCTION ERROR: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables are not configured in production. Web Push delivery is disabled until persistent VAPID keys are provided.'
+      );
+      return;
     } else {
       // Auto-generate dev keys for smooth offline / zero-config local testing
       const generated = webPush.generateVAPIDKeys();
