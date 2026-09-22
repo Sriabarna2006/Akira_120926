@@ -37,7 +37,7 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/((?!api|assets|favicon.svg|manifest.json).*)",
+      "source": "/((?!api|assets|favicon.svg|manifest.json|sw.js).*)",
       "destination": "/index.html"
     }
   ]
