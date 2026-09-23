@@ -32,3 +32,6 @@ Thumbs.db
 scratch/
 tmp/
 temp/
+
+.vercel
+.env*
