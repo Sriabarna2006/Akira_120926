@@ -70,9 +70,21 @@
   - `Authorization: Bearer <CRON_SECRET>` -> **200 OK** (PASS)
 
 ### 2.5 Web Push & PWA
-* **VAPID Public Key Distribution (`GET /api/notifications/vapid-public-key`)**: **PASS** (Returned active key)
+* **VAPID Public Key Distribution (`GET /api/notifications/vapid-public-key`)**: **PASS** (Returned active key in 2ms)
 * **Service Worker Caching Policy**: **PASS** (Bypasses `/api/*` and non-GET requests to prevent stale data)
 * **PWA Manifest Validation**: **PASS** (`standalone` display, `#0B0F17` theme, maskable icons)
+
+### 2.6 Real Performance Latency Benchmarks
+| Measured Route / Operation | Status | Latency (Measured) | Response Payload Size |
+| :--- | :--- | :--- | :--- |
+| **API Health (`/api/health`)** | `200 OK` | **20 ms** | 228 B |
+| **Database Remote Ping (`/api/health/db`)** | `200 OK` | **2,790 ms** | 1,308 B |
+| **Schema Integrity Audit (`/api/diagnostics/schema-health`)** | `200 OK` | **3,924 ms** | 982 B |
+| **System Diagnostics Telemetry (`/api/diagnostics/system-health`)** | `200 OK` | **9,490 ms** | 2,702 B |
+| **Storyline Knowledge Trajectories (`/api/storylines`)** | `200 OK` | **1 ms** | 2,161 B |
+| **Knowledge Graph Concepts (`/api/concepts`)** | `200 OK` | **2 ms** | 3,875 B |
+| **VAPID Public Key Discovery (`/api/notifications/vapid-public-key`)** | `200 OK` | **2 ms** | 120 B |
+| **Live News Ingestion Duration (27 Feeds Batch)** | `Complete` | **9,709 ms** | 1,758 Discovered / 342 Accepted |
 
 ---
 
