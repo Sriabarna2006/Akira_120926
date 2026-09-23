@@ -370,10 +370,21 @@ export class NewsIngestionService {
   /**
    * Returns top 10 live events using Phase 5 dynamic ranking & diversity engine
    */
-  public async getTop10LiveEvents(regionFilter?: string): Promise<CanonicalEvent[]> {
+  public async getTop10LiveEvents(
+    options?: string | { region?: string; category?: string; status?: string; limit?: number }
+  ): Promise<CanonicalEvent[]> {
+    if (typeof options === 'string') {
+      return RankingService.getTopRankedEvents({
+        regionId: options,
+        limit: 10,
+      });
+    }
+
     return RankingService.getTopRankedEvents({
-      regionId: regionFilter,
-      limit: 10,
+      regionId: options?.region,
+      categoryId: options?.category,
+      status: options?.status,
+      limit: options?.limit || 10,
     });
   }
 

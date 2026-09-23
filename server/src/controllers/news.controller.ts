@@ -4,8 +4,13 @@ import { aiExplainerService } from '../services/aiExplainer.service.js';
 
 export const getTop10LiveEvents = async (req: Request, res: Response) => {
   try {
-    const { region } = req.query;
-    const top10 = await newsIngestionService.getTop10LiveEvents(region as string);
+    const { region, category, status, label, limit } = req.query;
+    const top10 = await newsIngestionService.getTop10LiveEvents({
+      region: (region as string) || undefined,
+      category: (category as string) || undefined,
+      status: (status as string) || (label as string) || undefined,
+      limit: limit ? parseInt(limit as string, 10) : 10,
+    });
 
     res.json({
       success: true,
@@ -13,6 +18,7 @@ export const getTop10LiveEvents = async (req: Request, res: Response) => {
       meta: {
         count: top10.length,
         regionFilter: region || 'ALL',
+        statusFilter: status || label || 'ALL',
         timestamp: new Date().toISOString()
       }
     });

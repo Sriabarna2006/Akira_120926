@@ -173,6 +173,9 @@ export class RankingService {
                  e.urgencyLabel === 'IMPORTANT' || 
                  (e.importanceScore && e.importanceScore >= 70);
         }
+        if (targetStatus === 'NORMAL' || targetStatus === 'KNOWLEDGE' || targetStatus === 'WORLD') {
+          return true;
+        }
         return true;
       });
 

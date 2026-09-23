@@ -42,7 +42,8 @@ export const LiveTrendingPage: React.FC = () => {
     { id: 'ALL', label: 'All Intelligence', icon: <Layers className="w-3.5 h-3.5" /> },
     { id: 'BREAKING', label: '🔴 Breaking', icon: <AlertTriangle className="w-3.5 h-3.5 text-rose-500" /> },
     { id: 'TRENDING', label: '🔥 Trending', icon: <Flame className="w-3.5 h-3.5 text-amber-500" /> },
-    { id: 'IMPORTANT', label: '🚨 Important', icon: <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> },
+    { id: 'IMPORTANT', label: '⚡ High Impact', icon: <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> },
+    { id: 'NORMAL', label: '🌍 World & Knowledge News', icon: <Globe className="w-3.5 h-3.5 text-blue-400" /> },
   ];
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -259,10 +260,9 @@ export const LiveTrendingPage: React.FC = () => {
         <EmptyState
           icon={<TrendingUp className="w-8 h-8 text-cyan-500" />}
           title={`No ${selectedStatus !== 'ALL' ? selectedStatus : ''} ranked events in ${selectedRegion}`}
-          description="We couldn't find ranked events matching your selected filter. Switch filters or refresh the stream."
+          description="We couldn't find ranked events matching your selected filter. Switch filters or explore all live intelligence to gain world knowledge."
           actionLabel="Show All Intelligence"
           onAction={() => {
-            setSelectedRegion('ALL');
             setSelectedStatus('ALL');
           }}
         />
