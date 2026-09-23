@@ -6,6 +6,7 @@ import { SearchBar } from '../common/SearchBar';
 import { NotificationsModal } from '../common/NotificationsModal';
 import { SystemHealthModal } from '../common/SystemHealthModal';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { notificationService } from '../../services/notificationService';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -22,7 +23,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     if (user) {
       const fetchUnread = async () => {
         try {
-          const { notificationService } = await import('../../services/notificationService');
           const count = await notificationService.getUnreadCount();
           setUnreadCount(count);
         } catch (e) {

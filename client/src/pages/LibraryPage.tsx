@@ -55,7 +55,7 @@ export const LibraryPage: React.FC = () => {
 
   const tabs = [
     { id: 'articles', label: 'Saved Articles', icon: <FileText className="w-3.5 h-3.5" />, count: savedEvents.length },
-    { id: 'events', label: 'Saved Events', icon: <Bookmark className="w-3.5 h-3.5" />, count: 0 },
+    { id: 'events', label: 'Saved Events', icon: <Bookmark className="w-3.5 h-3.5" />, count: savedEvents.length },
     { id: 'recent', label: 'Recently Viewed', icon: <Clock className="w-3.5 h-3.5" />, count: 0 },
     { id: 'completed', label: 'Completed Learning', icon: <GraduationCap className="w-3.5 h-3.5" />, count: 0 },
   ] as const;
@@ -121,7 +121,7 @@ export const LibraryPage: React.FC = () => {
                   key={story.id}
                   className="p-5 rounded-2xl bg-white dark:bg-[#111827]/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-glass flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-cyan-500/30"
                 >
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 flex-1">
                     <div className="flex items-center gap-2">
                       <StatusIndicator status={story.importanceLabel || 'IMPORTANT'} size="sm" />
                       <Badge variant="concept" size="xs">{story.category}</Badge>
@@ -134,7 +134,7 @@ export const LibraryPage: React.FC = () => {
                       </h3>
                     </Link>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1">{story.summary}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{story.summary}</p>
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -171,13 +171,66 @@ export const LibraryPage: React.FC = () => {
       )}
 
       {activeTab === 'events' && (
-        <EmptyState
-          icon={<Sparkles className="w-8 h-8 text-indigo-500" />}
-          title="No saved canonical events"
-          description="Bookmark entire ongoing event clusters to track their real-world evolution and updates over time."
-          actionLabel="Explore Live & Trending"
-          onAction={() => navigate('/live')}
-        />
+        <>
+          {savedEvents.length > 0 ? (
+            <div className="space-y-4">
+              {savedEvents.map((story) => (
+                <div 
+                  key={story.id}
+                  className="p-5 rounded-2xl bg-white dark:bg-[#111827]/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-glass flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-indigo-500/30"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="info" size="xs">Canonical Cluster</Badge>
+                      <Badge variant="concept" size="xs">{story.category}</Badge>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{story.region}</span>
+                      {story.sources && story.sources.length > 0 && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                          {story.sources.length} sources corroborated
+                        </span>
+                      )}
+                    </div>
+
+                    <Link to={`/event/${story.id}`}>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors">
+                        {story.title}
+                      </h3>
+                    </Link>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{story.summary}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <Link
+                      to={`/event/${story.id}`}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
+                    >
+                      <span>Explore Timeline</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+
+                    <button 
+                      onClick={() => handleRemove(story.id)}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-500/20 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 transition-colors"
+                      title="Remove from library"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Sparkles className="w-8 h-8 text-indigo-500" />}
+              title="No saved canonical events"
+              description="Bookmark entire ongoing event clusters to track their real-world evolution and updates over time."
+              actionLabel="Explore Live & Trending"
+              onAction={() => navigate('/live')}
+            />
+          )}
+        </>
       )}
 
       {activeTab === 'recent' && (
