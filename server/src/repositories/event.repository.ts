@@ -618,8 +618,22 @@ export class EventRepository {
           idx++;
         }
         if (params.urgency && params.urgency.toUpperCase() !== 'ALL') {
-          conditions.push(`e.urgency_label = $${idx++}`);
-          values.push(params.urgency);
+          if (params.urgency.toUpperCase() === 'IMPORTANT') {
+            conditions.push(`(e.urgency_label = $${idx} OR e.importance_score >= 70 OR e.final_rank_score >= 70)`);
+            values.push(params.urgency);
+            idx++;
+          } else if (params.urgency.toUpperCase() === 'BREAKING') {
+            conditions.push(`(e.urgency_label = $${idx} OR e.final_rank_score >= 85)`);
+            values.push(params.urgency);
+            idx++;
+          } else if (params.urgency.toUpperCase() === 'TRENDING') {
+            conditions.push(`(e.urgency_label = $${idx} OR e.velocity_score >= 75)`);
+            values.push(params.urgency);
+            idx++;
+          } else {
+            conditions.push(`e.urgency_label = $${idx++}`);
+            values.push(params.urgency);
+          }
         }
         if (params.search) {
           conditions.push(`(e.title ILIKE $${idx} OR e.summary ILIKE $${idx})`);
@@ -764,7 +778,13 @@ export class EventRepository {
       filtered = filtered.filter((e) => e.categoryId?.toLowerCase() === params.categoryId?.toLowerCase());
     }
     if (params.urgency && params.urgency.toUpperCase() !== 'ALL') {
-      filtered = filtered.filter((e) => e.urgencyLabel === params.urgency);
+      const u = params.urgency.toUpperCase();
+      filtered = filtered.filter((e) => {
+        if (u === 'IMPORTANT') return e.urgencyLabel === 'IMPORTANT' || (e.importanceScore ?? 0) >= 70 || (e.finalRankScore ?? 0) >= 70;
+        if (u === 'BREAKING') return e.urgencyLabel === 'BREAKING' || (e.finalRankScore ?? 0) >= 85;
+        if (u === 'TRENDING') return e.urgencyLabel === 'TRENDING' || (e.velocityScore ?? 0) >= 75;
+        return e.urgencyLabel === params.urgency;
+      });
     }
     if (params.search) {
       const s = params.search.toLowerCase();
