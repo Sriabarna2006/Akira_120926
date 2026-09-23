@@ -3,7 +3,7 @@ export type SourceTier = 1 | 2 | 3;
 export type UrgencyLabel = 'BREAKING' | 'TRENDING' | 'IMPORTANT';
 export type TrendStatus = 'NORMAL' | 'RISING' | 'TRENDING' | 'HIGHLY_TRENDING';
 export type ImportanceStatus = 'LOW' | 'MODERATE' | 'IMPORTANT' | 'CRITICAL';
-export type FreshnessState = 'FRESH' | 'RECENT' | 'AGING' | 'STALE' | 'SOURCE_UNAVAILABLE';
+export type FreshnessState = 'FRESH' | 'RECENT' | 'AGING' | 'STALE' | 'SOURCE_UNAVAILABLE' | 'UNKNOWN';
 export type ConfidenceLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type LifecycleStatus = 
@@ -1437,6 +1437,7 @@ export interface NotificationPreference {
   dailyBriefingEnabled: boolean;
   knowledgeGapEnabled: boolean;
   dailyGoalEnabled: boolean;
+  studyDays?: number[]; // Array of days of week (0=Sunday, 1=Monday, ... 6=Saturday)
   studyTime: string; // HH:MM format e.g. "19:00"
   dailyBriefingTime: string; // HH:MM format e.g. "08:00"
   quietHoursStart: string; // HH:MM format e.g. "22:30"
@@ -1511,13 +1512,20 @@ export interface NotificationDecisionResult {
     | 'COOLDOWN_ACTIVE'
     | 'NO_SCHEDULED_ACTION'
     | 'NO_REVIEWS_DUE'
-    | 'NO_ACTIVE_SUBSCRIPTION';
+    | 'NO_ACTIVE_SUBSCRIPTION'
+    | 'STUDY_DAY_MISMATCH';
   details?: Record<string, any>;
 }
 
 // ============================================================================
-// PHASE 16: PRODUCTION NEWS RELIABILITY, SOURCE HEALTH & SEMANTIC INGESTION
+// PHASE 16 & 17: PRODUCTION NEWS RELIABILITY, SOURCE HEALTH & SEMANTIC INGESTION
 // ============================================================================
+
+export type EpistemicGroundingLabel =
+  | 'CONFIRMED'
+  | 'AI_EXPLANATION'
+  | 'ANALYSIS'
+  | 'POSSIBLE_FUTURE_DEVELOPMENT';
 
 export type SourceErrorType =
   | 'TIMEOUT'
@@ -1583,6 +1591,19 @@ export interface CategoryCoverageReport {
   uncoveredCategories: string[];
   coveragePercentage: number;
   perCategoryCounts: Record<string, number>;
+  healthyDomains?: string[];
+  staleDomains?: string[];
+  weakRegions?: string[];
+  sourceFailuresAffectingCoverage?: {
+    sourceId: string;
+    sourceName: string;
+    categoryId: string;
+    errorType: string;
+  }[];
+  domainFreshnessHours?: Record<string, number>;
+  uniqueEventsCount?: number;
+  multiSourceEventsCount?: number;
+  underrepresentedCategories?: string[];
   generatedAt: string;
 }
 
@@ -1623,4 +1644,5 @@ export interface EmbeddingVector {
   vector: number[];
   createdAt?: string;
 }
+
 

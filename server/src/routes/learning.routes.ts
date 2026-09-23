@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { LearningDashboardController } from '../controllers/learningDashboard.controller.js';
 import { PersonalizationController } from '../controllers/personalization.controller.js';
-import { getConcepts } from '../controllers/learning.controller.js';
+import { getConcepts, submitQuiz } from '../controllers/learning.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { rateLimiter } from '../middleware/rateLimit.middleware.js';
 
@@ -83,6 +83,13 @@ router.get(
   '/concepts',
   rateLimiter({ max: 120 }),
   getConcepts
+);
+
+// 9. Quiz Submission & Spaced Repetition Mastery Engine (Phase 7 & 8)
+router.post(
+  '/quiz/submit',
+  rateLimiter({ max: 60 }),
+  submitQuiz
 );
 
 export default router;

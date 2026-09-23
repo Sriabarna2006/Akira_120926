@@ -1358,9 +1358,14 @@ export const EventDetailPage: React.FC = () => {
           
           {/* 1. What Happened */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-              <Lightbulb className="h-4 w-4" />
-              <span>What Happened</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+                <Lightbulb className="h-4 w-4" />
+                <span>What Happened</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                CONFIRMED / REPORTED
+              </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {default5W1H.whatHappened}
@@ -1369,9 +1374,14 @@ export const EventDetailPage: React.FC = () => {
 
           {/* 2. Why Did It Happen */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-              <HelpCircle className="h-4 w-4" />
-              <span>Why Did It Happen</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                <HelpCircle className="h-4 w-4" />
+                <span>Why Did It Happen</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20">
+                AI EXPLANATION
+              </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {default5W1H.whyDidItHappen}
@@ -1380,9 +1390,14 @@ export const EventDetailPage: React.FC = () => {
 
           {/* 3. Why Does It Matter */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              <TrendingUp className="h-4 w-4" />
-              <span>Why Does It Matter</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                <TrendingUp className="h-4 w-4" />
+                <span>Why Does It Matter</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20">
+                ANALYSIS / INTERPRETATION
+              </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {default5W1H.whyDoesItMatter}
@@ -1391,9 +1406,14 @@ export const EventDetailPage: React.FC = () => {
 
           {/* 4. Background */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-              <History className="h-4 w-4" />
-              <span>Background & Context</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                <History className="h-4 w-4" />
+                <span>Background & Context</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                GROUNDED CONTEXT
+              </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {default5W1H.background}
@@ -1402,9 +1422,14 @@ export const EventDetailPage: React.FC = () => {
 
           {/* 5. Who Is Affected */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2 md:col-span-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-              <Users className="h-4 w-4" />
-              <span>Who Is Affected</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                <Users className="h-4 w-4" />
+                <span>Who Is Affected</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                AFFECTED PARTIES
+              </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               {default5W1H.whoIsAffected.map((party, i) => (
@@ -1418,9 +1443,14 @@ export const EventDetailPage: React.FC = () => {
 
           {/* 6. What Could Happen Next */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 space-y-2 md:col-span-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-              <Sparkles className="h-4 w-4" />
-              <span>What Could Happen Next (Forward Trajectory)</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                <Sparkles className="h-4 w-4" />
+                <span>What Could Happen Next (Forward Trajectory)</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
+                POSSIBLE FUTURE DEVELOPMENT
+              </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               {default5W1H.whatCouldHappenNext.map((scenario, i) => (

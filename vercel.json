@@ -40,6 +40,12 @@
       "source": "/((?!api|assets|favicon.svg|manifest.json|sw.js).*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/live/sync",
+      "schedule": "0 */4 * * *"
+    }
   ]
 }
 

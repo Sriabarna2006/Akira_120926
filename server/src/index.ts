@@ -13,11 +13,28 @@ const PORT = process.env.PORT || 5000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 
 // Middleware
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, server-to-server) or localhost dev origins
-    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    // Allow server-to-server, mobile apps, or curl requests with no origin
+    if (!origin) {
       return callback(null, true);
+    }
+    // Allow local development origins
+    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    // Match configured production origins or wildcard
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // In production, reject unauthorized cross-origin requests
+    if (process.env.NODE_ENV === 'production') {
+      return callback(new Error(`CORS origin ${origin} not permitted`));
     }
     return callback(null, true);
   },

@@ -1270,6 +1270,7 @@ export interface NotificationPreference {
   dailyBriefingEnabled: boolean;
   knowledgeGapEnabled: boolean;
   dailyGoalEnabled: boolean;
+  studyDays?: number[];
   studyTime: string;
   dailyBriefingTime: string;
   quietHoursStart: string;
@@ -1284,8 +1285,61 @@ export interface NotificationPreference {
 
 export type PushPermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
+export type FreshnessState = 'FRESH' | 'AGING' | 'STALE' | 'UNKNOWN';
 
+export type EpistemicGroundingLabel =
+  | 'CONFIRMED'
+  | 'AI_EXPLANATION'
+  | 'ANALYSIS'
+  | 'POSSIBLE_FUTURE_DEVELOPMENT';
 
+export interface CategoryCoverageReport {
+  totalCategories: number;
+  coveredCategories: number;
+  sparseCategories: string[];
+  uncoveredCategories: string[];
+  coveragePercentage: number;
+  perCategoryCounts: Record<string, number>;
+  healthyDomains?: string[];
+  staleDomains?: string[];
+  weakRegions?: string[];
+  sourceFailuresAffectingCoverage?: {
+    sourceId: string;
+    sourceName: string;
+    categoryId: string;
+    errorType: string;
+  }[];
+  domainFreshnessHours?: Record<string, number>;
+  uniqueEventsCount?: number;
+  multiSourceEventsCount?: number;
+  underrepresentedCategories?: string[];
+  generatedAt: string;
+}
 
-
-
+export interface SystemHealthStatus {
+  overallStatus: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL';
+  database: {
+    state: string;
+    circuitBreakerState: string;
+    totalPoolConnections: number;
+    activePoolConnections: number;
+    lastErrorClassification: string;
+  };
+  sources: {
+    total: number;
+    healthy: number;
+    degraded: number;
+    failing: number;
+    quarantined: number;
+    disabled: number;
+  };
+  ingestion: {
+    isSyncing: boolean;
+    lastSyncTime: string | null;
+    lastDurationMs: number;
+    activeEventsCount: number;
+  };
+  coverage: CategoryCoverageReport;
+  timestamp: string;
+  version: string;
+}

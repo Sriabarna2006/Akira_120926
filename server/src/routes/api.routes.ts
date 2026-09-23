@@ -19,20 +19,26 @@ import storylineRoutes from './storyline.routes.js';
 import notificationRoutes from './notification.routes.js';
 import diagnosticsRoutes from './diagnostics.routes.js';
 
+import { isDatabaseConnected, getDatabaseState } from '../db/dbClient.js';
+
 const router = Router();
 
 // Apply optional user authentication across all API routes
 router.use(authenticateUser);
 
-// 🩺 OPERATIONAL DIAGNOSTICS & HEALTH (PHASE 15)
+// 🩺 OPERATIONAL DIAGNOSTICS & HEALTH (PHASE 15 & 16)
 router.use('/diagnostics', diagnosticsRoutes);
 
 // 🩺 HEALTH CHECKS
 router.get('/health', (req, res) => {
+  const isDbConnected = isDatabaseConnected();
   res.json({
-    status: 'healthy',
+    status: isDbConnected ? 'healthy' : 'operational',
     service: 'AKIRA Real-World Intelligence & Learning Assistant API',
-    version: 'Phase 14 (Real-Time Intelligence & Mobile Notification System)',
+    environment: process.env.NODE_ENV || 'production',
+    database: getDatabaseState(),
+    uptime: Math.floor(process.uptime()),
+    version: '1.0.0 (Production Launch)',
     timestamp: new Date().toISOString(),
   });
 });

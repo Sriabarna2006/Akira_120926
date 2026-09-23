@@ -119,28 +119,43 @@ export function requireAdmin(
 
 /**
  * Internal Service Role or Admin Key Middleware
- * Protects automated endpoints (such as /api/live/sync) from unauthorized public invocation.
+ * Protects automated endpoints (such as /api/live/sync, /api/notifications/scheduler/run) from unauthorized public invocation.
+ * Supports:
+ *  - x-akira-internal-key header
+ *  - Authorization: Bearer <CRON_SECRET> header (standard for Vercel Cron)
+ *  - Authenticated admin JWT session
  */
 export function requireInternalSecret(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  const secretHeader = req.headers['x-akira-internal-key'];
-  const configuredSecret = process.env.INTERNAL_SYNC_SECRET || 'akira_internal_dev_secret';
+  const secretHeader = req.headers['x-akira-internal-key'] as string | undefined;
+  const authHeader = req.headers['authorization'];
+  const configuredSecret = process.env.INTERNAL_SYNC_SECRET || process.env.CRON_SECRET || 'akira_internal_dev_secret';
+  const cronSecret = process.env.CRON_SECRET;
 
-  // Accept valid internal secret header OR authenticated admin session
-  if (secretHeader && secretHeader === configuredSecret) {
+  // 1. Check x-akira-internal-key header
+  if (secretHeader && (secretHeader === configuredSecret || (cronSecret && secretHeader === cronSecret))) {
     return next();
   }
 
+  // 2. Check Authorization Bearer header for Vercel Cron / Internal callers
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const bearerToken = authHeader.split(' ')[1];
+    if (bearerToken && (bearerToken === configuredSecret || (cronSecret && bearerToken === cronSecret))) {
+      return next();
+    }
+  }
+
+  // 3. Check authenticated admin role
   if (req.user && req.user.role === 'admin') {
     return next();
   }
 
   res.status(403).json({
     error: 'Forbidden',
-    message: 'Internal service key or admin authorization required to trigger synchronization.',
+    message: 'Internal service key, CRON_SECRET, or admin authorization required to trigger synchronization.',
     timestamp: new Date().toISOString(),
   });
 }

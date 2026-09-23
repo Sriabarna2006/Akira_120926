@@ -93,3 +93,32 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// 🌐 Safe Fetch Interceptor (Phase 17 Service Worker Safety)
+// NEVER cache or intercept /api/*, /health, or non-GET requests as static assets
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // 1. Completely bypass dynamic API and server routes to network
+  if (
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/health') ||
+    event.request.method !== 'GET' ||
+    url.origin !== self.location.origin
+  ) {
+    return; // Standard network fetch
+  }
+
+  // 2. Network-first strategy for navigation and static assets
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      // Offline fallback for HTML navigation requests
+      if (event.request.mode === 'navigate') {
+        return caches.match('/index.html').then((cached) => cached || Response.error());
+      }
+      return Response.error();
+    })
+  );
+});
+
+

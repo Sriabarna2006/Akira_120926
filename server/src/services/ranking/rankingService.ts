@@ -189,18 +189,26 @@ export class RankingService {
       return filtered.slice(0, limit);
     }
 
-    // Diversity Control: Prevent over-concentration of a single category in Top 10
+    // Diversity Control: Prevent over-concentration of a single category or single publisher in Top 10
     const categoryCounts: Record<string, number> = {};
+    const publisherCounts: Record<string, number> = {};
+    const MAX_PER_PUBLISHER_IN_TOP_10 = 4;
     const diverseResults: CanonicalEvent[] = [];
     const overflow: CanonicalEvent[] = [];
 
     for (const evt of filtered) {
       const cat = evt.categoryId || 'other';
-      const count = categoryCounts[cat] || 0;
+      const pub = String((evt.metadata as any)?.initialSource || evt.sources?.[0]?.sourceName || 'unknown').toLowerCase();
+      const catCount = categoryCounts[cat] || 0;
+      const pubCount = publisherCounts[pub] || 0;
 
-      if (count < RANKING_CONFIG.DIVERSITY.MAX_PER_CATEGORY_IN_TOP_10) {
+      const isCategoryAllowed = catCount < RANKING_CONFIG.DIVERSITY.MAX_PER_CATEGORY_IN_TOP_10;
+      const isPublisherAllowed = pubCount < MAX_PER_PUBLISHER_IN_TOP_10;
+
+      if (isCategoryAllowed && isPublisherAllowed) {
         diverseResults.push(evt);
-        categoryCounts[cat] = count + 1;
+        categoryCounts[cat] = catCount + 1;
+        publisherCounts[pub] = pubCount + 1;
       } else {
         overflow.push(evt);
       }
@@ -208,10 +216,12 @@ export class RankingService {
       if (diverseResults.length >= limit) break;
     }
 
-    // Fill remaining slots if needed
+    // Fill remaining slots if needed from overflow
     if (diverseResults.length < limit && overflow.length > 0) {
       for (const ov of overflow) {
-        diverseResults.push(ov);
+        if (!diverseResults.some((d) => d.id === ov.id)) {
+          diverseResults.push(ov);
+        }
         if (diverseResults.length >= limit) break;
       }
     }

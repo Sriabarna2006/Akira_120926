@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,21 +106,18 @@ export async function runNeonMigrations(): Promise<{ success: boolean; message: 
   const rawSql = fs.readFileSync(schemaPath, 'utf8');
 
   try {
-    // Strip single-line comments and clean SQL
-    const cleanSql = rawSql
-      .replace(/--.*$/gm, '')
-      .replace(/\r\n/g, '\n');
+    // Execute full schema script using pg client to properly support triggers, functions, and transactions
+    const { Client } = await import('pg');
+    const client = new Client({
+      connectionString: DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    });
 
-    // Split by semicolons
-    const statements = cleanSql
-      .split(';')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    for (const stmt of statements) {
-      if (stmt) {
-        await (sql as any).query(stmt);
-      }
+    await client.connect();
+    try {
+      await client.query(rawSql);
+    } finally {
+      await client.end();
     }
 
     const tablesRes = (await sql`
@@ -133,7 +131,7 @@ export async function runNeonMigrations(): Promise<{ success: boolean; message: 
 
     return {
       success: true,
-      message: `Successfully executed neon_schema.sql on Neon DB!`,
+      message: `Successfully executed neon_schema.sql on Neon DB (${tables.length} tables verified).`,
       appliedTables: tables,
     };
   } catch (err: any) {

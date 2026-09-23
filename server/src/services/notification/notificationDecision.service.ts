@@ -41,6 +41,26 @@ export class NotificationDecisionService {
       };
     }
 
+    // 2b. Study Days of Week Check (for STUDY_REMINDER)
+    if (
+      candidate.notificationType === 'STUDY_REMINDER' &&
+      Array.isArray(userPreference.studyDays) &&
+      userPreference.studyDays.length > 0
+    ) {
+      const currentDay = this.getDayOfWeekInTimezone(userPreference.timezone, currentTime);
+      if (!userPreference.studyDays.includes(currentDay)) {
+        return {
+          shouldNotify: false,
+          rejectionReason: 'STUDY_DAY_MISMATCH',
+          details: {
+            configuredDays: userPreference.studyDays,
+            currentDay,
+            timezone: userPreference.timezone,
+          },
+        };
+      }
+    }
+
     // 3. Minimum Importance Score Check (for news/storyline events)
     if (typeof candidate.importanceScore === 'number') {
       if (candidate.importanceScore < userPreference.minimumImportance) {
@@ -165,6 +185,31 @@ export class NotificationDecisionService {
       const m = String(referenceDate.getUTCMinutes()).padStart(2, '0');
       const utcTime = `${h}:${m}`;
       return this.isTimeInRange(utcTime, quietStart, quietEnd);
+    }
+  }
+
+  /**
+   * Evaluates the current day of the week (0 = Sunday, 1 = Monday, ... 6 = Saturday) in the specified timezone.
+   */
+  public static getDayOfWeekInTimezone(timezone: string, referenceDate: Date = new Date()): number {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'short',
+      });
+      const weekday = formatter.format(referenceDate);
+      const map: Record<string, number> = {
+        Sun: 0,
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+      };
+      return map[weekday] !== undefined ? map[weekday] : referenceDate.getDay();
+    } catch (err) {
+      return referenceDate.getDay();
     }
   }
 
