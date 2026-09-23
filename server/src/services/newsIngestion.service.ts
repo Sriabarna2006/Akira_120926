@@ -143,7 +143,11 @@ export class NewsIngestionService {
             report.articlesDiscovered += fetchResult.items.length;
 
             // Process articles for this source (top 15 newest items per cycle)
-            for (const rawItem of fetchResult.items.slice(0, 15)) {
+            const candidateItems = fetchResult.items.slice(0, 15);
+            const urlsToCheck = candidateItems.map((item) => normalizeArticleUrl(item.link || '')).filter(Boolean);
+            const existingUrlsSet = await ArticleRepository.findExistingUrls(urlsToCheck);
+
+            for (const rawItem of candidateItems) {
               const rawUrl = rawItem.link || '';
               const normalizedUrl = normalizeArticleUrl(rawUrl);
               const rawTitle = rawItem.title || '';
@@ -167,9 +171,8 @@ export class NewsIngestionService {
                 continue;
               }
 
-              // 5. Deduplication check against database
-              const alreadyExists = await ArticleRepository.existsByUrl(normalizedUrl);
-              if (alreadyExists) {
+              // 5. Fast batch deduplication check against database
+              if (existingUrlsSet.has(normalizedUrl)) {
                 report.duplicatesSkipped++;
                 continue;
               }

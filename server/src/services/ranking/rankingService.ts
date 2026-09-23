@@ -136,10 +136,15 @@ export class RankingService {
 
     let filtered = [...events];
 
-    // Filter by Region
+    // Filter by Region (handling slug or full name)
     if (regionId && regionId.toUpperCase() !== 'ALL') {
-      const targetRegion = regionId.toLowerCase();
-      filtered = filtered.filter((e) => (e.regionId || '').toLowerCase() === targetRegion || (e.region || '').toLowerCase() === targetRegion);
+      const targetRegion = regionId.toLowerCase().replace(/\s+/g, '-');
+      const targetRegionName = regionId.toLowerCase();
+      filtered = filtered.filter((e) => {
+        const rId = (e.regionId || '').toLowerCase().replace(/\s+/g, '-');
+        const rName = (e.region || '').toLowerCase();
+        return rId === targetRegion || rName === targetRegionName || rId.includes(targetRegion) || targetRegion.includes(rId);
+      });
     }
 
     // Filter by Category
@@ -148,15 +153,32 @@ export class RankingService {
       filtered = filtered.filter((e) => (e.categoryId || '').toLowerCase() === targetCategory || (e.category || '').toLowerCase() === targetCategory);
     }
 
-    // Filter by Urgency/Status
+    // Filter by Urgency/Status with graceful fallback
     if (status && status.toUpperCase() !== 'ALL') {
       const targetStatus = status.toUpperCase();
-      filtered = filtered.filter((e) => {
-        if (targetStatus === 'BREAKING') return e.rankingMetadata?.breakingStatus || e.urgencyLabel === 'BREAKING';
-        if (targetStatus === 'TRENDING') return e.rankingMetadata?.trendStatus === 'TRENDING' || e.rankingMetadata?.trendStatus === 'HIGHLY_TRENDING' || e.urgencyLabel === 'TRENDING';
-        if (targetStatus === 'IMPORTANT') return e.rankingMetadata?.importanceStatus === 'IMPORTANT' || e.rankingMetadata?.importanceStatus === 'CRITICAL' || e.urgencyLabel === 'IMPORTANT';
+      const statusFiltered = filtered.filter((e) => {
+        if (targetStatus === 'BREAKING') {
+          return e.rankingMetadata?.breakingStatus || e.urgencyLabel === 'BREAKING' || (e.finalRankScore && e.finalRankScore >= 85);
+        }
+        if (targetStatus === 'TRENDING') {
+          return e.rankingMetadata?.trendStatus === 'TRENDING' || 
+                 e.rankingMetadata?.trendStatus === 'HIGHLY_TRENDING' || 
+                 e.rankingMetadata?.trendStatus === 'RISING' || 
+                 e.urgencyLabel === 'TRENDING' || 
+                 (e.velocityScore && e.velocityScore >= 75);
+        }
+        if (targetStatus === 'IMPORTANT') {
+          return e.rankingMetadata?.importanceStatus === 'IMPORTANT' || 
+                 e.rankingMetadata?.importanceStatus === 'CRITICAL' || 
+                 e.urgencyLabel === 'IMPORTANT' || 
+                 (e.importanceScore && e.importanceScore >= 70);
+        }
         return true;
       });
+
+      if (statusFiltered.length > 0) {
+        filtered = statusFiltered;
+      }
     }
 
     // Deterministic Tie-Breaking Comparator
@@ -317,15 +339,22 @@ export class RankingService {
     const { events } = await EventRepository.findAll({
       regionId: options.regionId,
       categoryId: options.categoryId,
-      limit: 20,
+      limit: Math.max(30, limit * 3),
       page: 1,
     });
 
     const now = new Date();
     const scoredEvents: CanonicalEvent[] = [];
 
+    // Check for any events that might be missing articles and batch-fetch them if needed
+    const missingArticleIds = events.filter((e) => !e.articles || e.articles.length === 0).map((e) => e.id);
+    let batchArticlesMap = new Map<string, Article[]>();
+    if (missingArticleIds.length > 0) {
+      batchArticlesMap = await EventRepository.findArticlesByEventIds(missingArticleIds);
+    }
+
     for (const evt of events) {
-      const articles = evt.articles || (await EventRepository.findArticlesByEventId(evt.id));
+      const articles = evt.articles && evt.articles.length > 0 ? evt.articles : (batchArticlesMap.get(evt.id) || []);
       const scored = this.scoreEvent(evt, articles, now);
       scoredEvents.push(scored);
     }

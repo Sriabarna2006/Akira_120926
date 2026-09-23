@@ -265,6 +265,32 @@ export class ArticleRepository {
     return found !== null;
   }
 
+  static async findExistingUrls(urls: string[]): Promise<Set<string>> {
+    if (!urls || urls.length === 0) return new Set();
+    const existing = new Set<string>();
+
+    // Check in-memory articles
+    for (const a of inMemoryArticles) {
+      if (urls.includes(a.url)) {
+        existing.add(a.url);
+      }
+    }
+
+    try {
+      const sql = `SELECT url FROM public.articles WHERE url = ANY($1::text[]);`;
+      const rows = await query<{ url: string }>(sql, [urls]);
+      if (rows && rows.length > 0) {
+        for (const r of rows) {
+          existing.add(r.url);
+        }
+      }
+    } catch (err) {
+      console.warn('[ArticleRepository] DB findExistingUrls notice:', (err as Error).message);
+    }
+
+    return existing;
+  }
+
   static async updateEventId(articleId: string, eventId: string): Promise<void> {
     try {
       const sql = `UPDATE public.articles SET event_id = $1 WHERE id = $2;`;
@@ -285,49 +311,40 @@ export class ArticleRepository {
     };
 
     try {
-      const existing = await queryOne<{ id: string }>(`SELECT id FROM public.articles WHERE url = $1 LIMIT 1;`, [newArticle.url]);
+      const upsertSql = `
+        INSERT INTO public.articles (
+          id, source_id, event_id, title, url, content_snippet, published_at, region_id, category_id
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (url) DO UPDATE SET
+          title = EXCLUDED.title,
+          content_snippet = EXCLUDED.content_snippet,
+          event_id = COALESCE(EXCLUDED.event_id, public.articles.event_id),
+          region_id = COALESCE(EXCLUDED.region_id, public.articles.region_id),
+          category_id = COALESCE(EXCLUDED.category_id, public.articles.category_id)
+        RETURNING 
+          id, source_id AS "sourceId", event_id AS "eventId", title, url, 
+          content_snippet AS "contentSnippet", published_at AS "publishedAt", 
+          region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
+      `;
+      
+      let rows = await query<Article>(upsertSql, [
+        newArticle.id,
+        newArticle.sourceId || null,
+        newArticle.eventId || null,
+        newArticle.title,
+        newArticle.url,
+        newArticle.contentSnippet || null,
+        newArticle.publishedAt,
+        newArticle.regionId || null,
+        newArticle.categoryId || null,
+      ]);
 
-      if (existing) {
-        const updateSql = `
-          UPDATE public.articles 
-          SET 
-            title = $1, 
-            content_snippet = $2, 
-            event_id = COALESCE($3, event_id),
-            region_id = COALESCE($4, region_id),
-            category_id = COALESCE($5, category_id)
-          WHERE id = $6
-          RETURNING 
-            id, source_id AS "sourceId", event_id AS "eventId", title, url, 
-            content_snippet AS "contentSnippet", published_at AS "publishedAt", 
-            region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
-        `;
-        const rows = await query<Article>(updateSql, [
-          newArticle.title,
-          newArticle.contentSnippet || null,
-          newArticle.eventId || null,
-          newArticle.regionId || null,
-          newArticle.categoryId || null,
-          existing.id,
-        ]);
-        if (rows && rows.length > 0) {
-          return rows[0];
-        }
-      } else {
-        const insertSql = `
-          INSERT INTO public.articles (
-            id, source_id, event_id, title, url, content_snippet, published_at, region_id, category_id
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          RETURNING 
-            id, source_id AS "sourceId", event_id AS "eventId", title, url, 
-            content_snippet AS "contentSnippet", published_at AS "publishedAt", 
-            region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
-        `;
-        
-        let rows = await query<Article>(insertSql, [
+      // If insertion failed due to FK constraint on unknown source_id, fallback with source_id=null
+      if ((!rows || rows.length === 0) && newArticle.sourceId) {
+        rows = await query<Article>(upsertSql, [
           newArticle.id,
-          newArticle.sourceId || null,
+          null,
           newArticle.eventId || null,
           newArticle.title,
           newArticle.url,
@@ -336,26 +353,10 @@ export class ArticleRepository {
           newArticle.regionId || null,
           newArticle.categoryId || null,
         ]);
+      }
 
-        // If insertion failed due to FK constraint on unknown source_id, fallback with source_id=null
-        if ((!rows || rows.length === 0) && newArticle.sourceId) {
-          console.warn(`[ArticleRepository] Retrying article insertion with source_id=null fallback for: ${newArticle.url}`);
-          rows = await query<Article>(insertSql, [
-            newArticle.id,
-            null,
-            newArticle.eventId || null,
-            newArticle.title,
-            newArticle.url,
-            newArticle.contentSnippet || null,
-            newArticle.publishedAt,
-            newArticle.regionId || null,
-            newArticle.categoryId || null,
-          ]);
-        }
-
-        if (rows && rows.length > 0) {
-          return rows[0];
-        }
+      if (rows && rows.length > 0) {
+        return rows[0];
       }
     } catch (err: any) {
       console.warn('[ArticleRepository] DB insert/update error:', err.message);

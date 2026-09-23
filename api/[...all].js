@@ -78317,23 +78317,24 @@ var evidenceRepository = new EvidenceRepository();
 // server/src/repositories/event.repository.ts
 var inMemoryObservations = [];
 var DEFAULT_EVENTS = [
+  // --- TAMIL NADU ---
   {
     id: "evt_tn_ev_hub_2026",
     title: "Tamil Nadu Cabinet Clears Mega Infrastructure & Electric Mobility Corridor Policy",
     summary: "State government approves capital investment framework expanding metro transit links across Chennai and Hosur EV manufacturing hub.",
     regionId: "tamil-nadu",
     categoryId: "infrastructure",
-    urgencyLabel: "IMPORTANT",
+    urgencyLabel: "BREAKING",
     importanceScore: 94,
     velocityScore: 90,
     finalRankScore: 96,
     whyItMatters: "Accelerates high-speed regional transit corridors and strengthens clean mobility industrial employment in Tamil Nadu.",
-    firstPublishedAt: new Date(Date.now() - 4 * 36e5).toISOString(),
-    lastUpdatedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    firstPublishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 20 * 6e4).toISOString(),
     sourceCount: 2,
     lifecycleStatus: "OFFICIAL_CONFIRMATION",
     metadata: { is_dev_sample: true },
-    createdAt: new Date(Date.now() - 4 * 36e5).toISOString(),
+    createdAt: new Date(Date.now() - 1 * 36e5).toISOString(),
     sources: [
       {
         id: "a0000000-0000-0000-0000-000000000001",
@@ -78343,9 +78344,9 @@ var DEFAULT_EVENTS = [
         title: "TN Cabinet gives nod to industrial corridor expansion and EV battery parks",
         url: "https://www.thehindu.com/news/national/tamil-nadu/ev-corridor-policy-2026",
         snippet: "The State Cabinet on Monday approved a dedicated infrastructure fund to boost EV manufacturing clusters in Hosur and Coimbatore.",
-        publishedAt: new Date(Date.now() - 4 * 36e5).toISOString(),
+        publishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
         tier: 1,
-        createdAt: new Date(Date.now() - 4 * 36e5).toISOString()
+        createdAt: new Date(Date.now() - 1 * 36e5).toISOString()
       },
       {
         id: "a0000000-0000-0000-0000-000000000002",
@@ -78355,29 +78356,126 @@ var DEFAULT_EVENTS = [
         title: "Tamil Nadu launches multi-modal transit links for industrial hubs",
         url: "https://timesofindia.indiatimes.com/city/chennai/tn-transit-ev-policy-2026",
         snippet: "New rail and expressway linkages cleared to integrate industrial corridors across the state.",
-        publishedAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+        publishedAt: new Date(Date.now() - 40 * 6e4).toISOString(),
         tier: 2,
+        createdAt: new Date(Date.now() - 40 * 6e4).toISOString()
+      }
+    ]
+  },
+  {
+    id: "evt_tn_semiconductor_2026",
+    title: "Tamil Nadu Announces \u20B912,000 Cr Semiconductor OSAT & Chip Testing Complex",
+    summary: "State inks pacts with leading precision hardware conglomerates to build advanced chip packaging and testing facilities near Sriperumbudur.",
+    regionId: "tamil-nadu",
+    categoryId: "technology",
+    urgencyLabel: "TRENDING",
+    importanceScore: 92,
+    velocityScore: 86,
+    finalRankScore: 93,
+    whyItMatters: "Positions Tamil Nadu as a vital component in India Semiconductor Mission and boosts high-skill electronics employment.",
+    firstPublishedAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    sourceCount: 2,
+    lifecycleStatus: "NEW_DEVELOPMENT",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000005",
+        eventId: "evt_tn_semiconductor_2026",
+        sourceId: "economic-times",
+        sourceName: "The Economic Times",
+        title: "TN signs landmark semiconductor packaging hub agreements",
+        url: "https://economictimes.indiatimes.com/tech/hardware/tn-semiconductor-park",
+        snippet: "State industries department confirms advanced fabrication support ecosystem in Chennai tech belt.",
+        publishedAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+        tier: 1,
         createdAt: new Date(Date.now() - 3 * 36e5).toISOString()
       }
     ]
   },
+  {
+    id: "evt_tn_drain_infra_2026",
+    title: "Greater Chennai Corporation Expedites Stormwater & Coastal Drain Integration",
+    summary: "Civic authorities deploy automated sensor telemetry across 68 flood-prone locations to improve monsoon resilience.",
+    regionId: "tamil-nadu",
+    categoryId: "infrastructure",
+    urgencyLabel: "IMPORTANT",
+    importanceScore: 88,
+    velocityScore: 80,
+    finalRankScore: 89,
+    whyItMatters: "Mitigates urban waterlogging risks ahead of northeast monsoon and safeguards vital transport lifelines.",
+    firstPublishedAt: new Date(Date.now() - 5 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    sourceCount: 1,
+    lifecycleStatus: "OFFICIAL_CONFIRMATION",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 5 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000006",
+        eventId: "evt_tn_drain_infra_2026",
+        sourceId: "the-hindu-chennai",
+        sourceName: "The Hindu (Chennai)",
+        title: "GCC accelerates stormwater drain interlinking before monsoon season",
+        url: "https://www.thehindu.com/news/cities/chennai/gcc-drain-linking-project",
+        snippet: "Chennai Corporation establishes round-the-clock telemetry monitoring for regional drainage networks.",
+        publishedAt: new Date(Date.now() - 5 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 5 * 36e5).toISOString()
+      }
+    ]
+  },
+  {
+    id: "evt_tn_higher_edu_2026",
+    title: "Anna University & IIT Madras Launch Joint AI & Quantum Research Center",
+    summary: "Premier Tamil Nadu universities collaborate on high-performance computing labs and state-wide student fellowship programs.",
+    regionId: "tamil-nadu",
+    categoryId: "education",
+    urgencyLabel: "IMPORTANT",
+    importanceScore: 85,
+    velocityScore: 78,
+    finalRankScore: 87,
+    whyItMatters: "Expands cutting-edge deep tech research opportunities and startup incubation across regional engineering colleges.",
+    firstPublishedAt: new Date(Date.now() - 7 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+    sourceCount: 1,
+    lifecycleStatus: "OFFICIAL_CONFIRMATION",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 7 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000007",
+        eventId: "evt_tn_higher_edu_2026",
+        sourceId: "the-hindu-tn",
+        sourceName: "The Hindu (Tamil Nadu)",
+        title: "IIT Madras and Anna University launch joint frontier computing consortium",
+        url: "https://www.thehindu.com/news/national/tamil-nadu/ai-consortium-education",
+        snippet: "Consortium will fund 500 doctoral fellowships in applied machine intelligence and quantum physics.",
+        publishedAt: new Date(Date.now() - 7 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 7 * 36e5).toISOString()
+      }
+    ]
+  },
+  // --- INDIA ---
   {
     id: "evt_macro_rates_2026",
     title: "Reserve Bank of India & Global Central Banks Shift Monetary Policy Stance",
     summary: "Major central banks announce calibrated interest rate adjustments to balance inflation reduction with economic growth targets.",
     regionId: "india",
     categoryId: "economy",
-    urgencyLabel: "IMPORTANT",
+    urgencyLabel: "BREAKING",
     importanceScore: 92,
     velocityScore: 88,
     finalRankScore: 94,
     whyItMatters: "Directly shapes retail borrowing costs, investment decisions, and capital market valuations across sectors.",
-    firstPublishedAt: new Date(Date.now() - 6 * 36e5).toISOString(),
-    lastUpdatedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    firstPublishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 30 * 6e4).toISOString(),
     sourceCount: 2,
     lifecycleStatus: "OFFICIAL_CONFIRMATION",
     metadata: { is_dev_sample: true },
-    createdAt: new Date(Date.now() - 6 * 36e5).toISOString(),
+    createdAt: new Date(Date.now() - 1 * 36e5).toISOString(),
     sources: [
       {
         id: "a0000000-0000-0000-0000-000000000003",
@@ -78387,29 +78485,94 @@ var DEFAULT_EVENTS = [
         title: "RBI signals calibrated transition in monetary liquidity policy",
         url: "https://economictimes.indiatimes.com/news/economy/policy/rbi-monetary-policy-2026",
         snippet: "Central bank outlines steady glidepath for headline inflation while maintaining financial stability.",
-        publishedAt: new Date(Date.now() - 6 * 36e5).toISOString(),
+        publishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
         tier: 1,
-        createdAt: new Date(Date.now() - 6 * 36e5).toISOString()
+        createdAt: new Date(Date.now() - 1 * 36e5).toISOString()
       }
     ]
   },
+  {
+    id: "evt_india_isro_gaganyaan_2026",
+    title: "ISRO Completes Critical Uncrewed Orbital Module Mission for Gaganyaan",
+    summary: "Space agency successfully executes automated rendezvous, life support telemetry verification, and sea recovery simulation in Bay of Bengal.",
+    regionId: "india",
+    categoryId: "science",
+    urgencyLabel: "TRENDING",
+    importanceScore: 95,
+    velocityScore: 91,
+    finalRankScore: 96,
+    whyItMatters: "Final critical milestone paving the way for India first human spaceflight mission.",
+    firstPublishedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 45 * 6e4).toISOString(),
+    sourceCount: 2,
+    lifecycleStatus: "NEW_DEVELOPMENT",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000008",
+        eventId: "evt_india_isro_gaganyaan_2026",
+        sourceId: "the-hindu",
+        sourceName: "The Hindu",
+        title: "ISRO aces uncrewed Gaganyaan orbital module recovery test",
+        url: "https://www.thehindu.com/sci-tech/science/isro-gaganyaan-orbital-test",
+        snippet: "The spacecraft executed a flawless atmospheric reentry trajectory with parachute deployment over the Bay of Bengal.",
+        publishedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 2 * 36e5).toISOString()
+      }
+    ]
+  },
+  {
+    id: "evt_india_cyber_defense_2026",
+    title: "CERT-In Issues National Security Advisory on Critical Grid Cyber Resilience",
+    summary: "National cybersecurity agency directs energy, banking, and transit sectors to patch zero-day industrial control firmware immediately.",
+    regionId: "india",
+    categoryId: "security",
+    urgencyLabel: "BREAKING",
+    importanceScore: 90,
+    velocityScore: 85,
+    finalRankScore: 92,
+    whyItMatters: "Protects critical national infrastructure and digital financial networks against coordinated threat vectors.",
+    firstPublishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 15 * 6e4).toISOString(),
+    sourceCount: 1,
+    lifecycleStatus: "OFFICIAL_CONFIRMATION",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000009",
+        eventId: "evt_india_cyber_defense_2026",
+        sourceId: "indian-express",
+        sourceName: "The Indian Express",
+        title: "CERT-In warns infrastructure operators of active ICS firmware exploits",
+        url: "https://indianexpress.com/article/technology/tech-news/cert-in-advisory-grid",
+        snippet: "Advisory mandates automated audit trails and multi-factor isolation for all operational technology systems.",
+        publishedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 1 * 36e5).toISOString()
+      }
+    ]
+  },
+  // --- WORLD ---
   {
     id: "evt_ai_semiconductor_2026",
     title: "Next-Generation Semiconductor Consortium Announces Global Fab Initiative",
     summary: "Leading chipmakers and research universities unveil sub-2nm architectural standard for high-throughput AI accelerator silicon.",
     regionId: "world",
     categoryId: "technology",
-    urgencyLabel: "IMPORTANT",
-    importanceScore: 88,
-    velocityScore: 82,
-    finalRankScore: 90,
+    urgencyLabel: "BREAKING",
+    importanceScore: 94,
+    velocityScore: 92,
+    finalRankScore: 95,
     whyItMatters: "Defines standard architectures for data center AI workloads and next-generation sovereign computing infrastructure.",
-    firstPublishedAt: new Date(Date.now() - 8 * 36e5).toISOString(),
-    lastUpdatedAt: new Date(Date.now() - 3 * 36e5).toISOString(),
+    firstPublishedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 30 * 6e4).toISOString(),
     sourceCount: 2,
     lifecycleStatus: "NEW_DEVELOPMENT",
     metadata: { is_dev_sample: true },
-    createdAt: new Date(Date.now() - 8 * 36e5).toISOString(),
+    createdAt: new Date(Date.now() - 2 * 36e5).toISOString(),
     sources: [
       {
         id: "a0000000-0000-0000-0000-000000000004",
@@ -78419,9 +78582,73 @@ var DEFAULT_EVENTS = [
         title: "Semiconductor giants form new alliance for sub-2nm AI accelerator hardware",
         url: "https://techcrunch.com/2026/09/12/sub-2nm-ai-hardware-consortium",
         snippet: "Consortium aims to standardize ultra-low latency optical interconnects for next-generation neural processors.",
-        publishedAt: new Date(Date.now() - 8 * 36e5).toISOString(),
+        publishedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
         tier: 2,
-        createdAt: new Date(Date.now() - 8 * 36e5).toISOString()
+        createdAt: new Date(Date.now() - 2 * 36e5).toISOString()
+      }
+    ]
+  },
+  {
+    id: "evt_world_climate_summit_2026",
+    title: "Global Clean Energy Accord Unveils $500B Global Grid Interconnection Treaty",
+    summary: "Multilateral summit ratifies international cross-border undersea high-voltage direct current grid standard for renewable energy sharing.",
+    regionId: "world",
+    categoryId: "environment",
+    urgencyLabel: "TRENDING",
+    importanceScore: 91,
+    velocityScore: 84,
+    finalRankScore: 92,
+    whyItMatters: "Accelerates renewable grid balancing between hemispheres and reduces reliance on thermal peaking power plants.",
+    firstPublishedAt: new Date(Date.now() - 4 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 1 * 36e5).toISOString(),
+    sourceCount: 2,
+    lifecycleStatus: "OFFICIAL_CONFIRMATION",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 4 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000010",
+        eventId: "evt_world_climate_summit_2026",
+        sourceId: "bbc-world",
+        sourceName: "BBC News",
+        title: "World leaders ratify historic cross-continental green grid treaty",
+        url: "https://www.bbc.com/news/science-environment-689001",
+        snippet: "The accord sets unified technical standards for ultra-high voltage undersea power cables across Europe, Asia, and the Middle East.",
+        publishedAt: new Date(Date.now() - 4 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 4 * 36e5).toISOString()
+      }
+    ]
+  },
+  {
+    id: "evt_world_quantum_advancement_2026",
+    title: "Physicists Demonstrate Error-Corrected Logical Qubit Scalability in Diamond Lattice",
+    summary: "Breakthrough experimental architecture enables Room-Temperature Nitrogen-Vacancy center qubits with 99.9% gate fidelity.",
+    regionId: "world",
+    categoryId: "science",
+    urgencyLabel: "IMPORTANT",
+    importanceScore: 89,
+    velocityScore: 82,
+    finalRankScore: 90,
+    whyItMatters: "Removes cryogenic dilution refrigerator constraints, opening the path to room-temperature modular quantum computers.",
+    firstPublishedAt: new Date(Date.now() - 6 * 36e5).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 2 * 36e5).toISOString(),
+    sourceCount: 1,
+    lifecycleStatus: "NEW_DEVELOPMENT",
+    metadata: { is_dev_sample: true },
+    createdAt: new Date(Date.now() - 6 * 36e5).toISOString(),
+    sources: [
+      {
+        id: "a0000000-0000-0000-0000-000000000011",
+        eventId: "evt_world_quantum_advancement_2026",
+        sourceId: "mit-tech-review",
+        sourceName: "MIT Technology Review",
+        title: "Room-temperature quantum computing takes leap forward with diamond lattice qubit array",
+        url: "https://www.technologyreview.com/2026/09/diamond-lattice-quantum-breakthrough",
+        snippet: "Researchers demonstrate fault-tolerant quantum error correction without liquid helium cooling.",
+        publishedAt: new Date(Date.now() - 6 * 36e5).toISOString(),
+        tier: 1,
+        createdAt: new Date(Date.now() - 6 * 36e5).toISOString()
       }
     ]
   }
@@ -78493,7 +78720,20 @@ var EventRepository = class {
             WHERE event_id = ANY($1::text[])
             ORDER BY tier ASC, published_at DESC;
           `;
-          const allSources = await query(sourcesSql, [eventIds]);
+          const articlesSql = `
+            SELECT 
+              a.id, a.source_id AS "sourceId", s.name AS "sourceName", a.event_id AS "eventId",
+              a.title, a.url, a.content_snippet AS "contentSnippet", a.published_at AS "publishedAt",
+              a.region_id AS "regionId", a.category_id AS "categoryId", a.created_at AS "createdAt"
+            FROM public.articles a
+            LEFT JOIN public.sources s ON a.source_id = s.id
+            WHERE a.event_id = ANY($1::text[])
+            ORDER BY a.published_at DESC;
+          `;
+          const [allSources, allArticles] = await Promise.all([
+            query(sourcesSql, [eventIds]),
+            query(articlesSql, [eventIds]).catch(() => [])
+          ]);
           const sourcesByEvent = /* @__PURE__ */ new Map();
           for (const s of allSources) {
             if (!sourcesByEvent.has(s.eventId)) {
@@ -78501,8 +78741,18 @@ var EventRepository = class {
             }
             sourcesByEvent.get(s.eventId).push(s);
           }
+          const articlesByEvent = /* @__PURE__ */ new Map();
+          for (const a2 of allArticles) {
+            if (a2.eventId) {
+              if (!articlesByEvent.has(a2.eventId)) {
+                articlesByEvent.set(a2.eventId, []);
+              }
+              articlesByEvent.get(a2.eventId).push(a2);
+            }
+          }
           for (const ev of rows) {
             ev.sources = sourcesByEvent.get(ev.id) || [];
+            ev.articles = articlesByEvent.get(ev.id) || [];
           }
           return { events: rows, total: total2 };
         }
@@ -78660,6 +78910,36 @@ var EventRepository = class {
       console.warn("[EventRepository] DB findArticlesByEventId error:", err.message);
     }
     return [];
+  }
+  static async findArticlesByEventIds(eventIds) {
+    const result = /* @__PURE__ */ new Map();
+    if (!eventIds || eventIds.length === 0) return result;
+    try {
+      const sql2 = `
+        SELECT 
+          a.id, a.source_id AS "sourceId", s.name AS "sourceName", a.event_id AS "eventId",
+          a.title, a.url, a.content_snippet AS "contentSnippet", a.published_at AS "publishedAt",
+          a.region_id AS "regionId", a.category_id AS "categoryId", a.created_at AS "createdAt"
+        FROM public.articles a
+        LEFT JOIN public.sources s ON a.source_id = s.id
+        WHERE a.event_id = ANY($1::text[])
+        ORDER BY a.published_at DESC;
+      `;
+      const rows = await query(sql2, [eventIds]);
+      if (rows && rows.length > 0) {
+        for (const a2 of rows) {
+          if (a2.eventId) {
+            if (!result.has(a2.eventId)) {
+              result.set(a2.eventId, []);
+            }
+            result.get(a2.eventId).push(a2);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[EventRepository] DB findArticlesByEventIds error:", err.message);
+    }
+    return result;
   }
   static async create(event) {
     const newEvent = {
@@ -79199,6 +79479,27 @@ var ArticleRepository = class {
     const found = await this.findByUrl(url);
     return found !== null;
   }
+  static async findExistingUrls(urls) {
+    if (!urls || urls.length === 0) return /* @__PURE__ */ new Set();
+    const existing = /* @__PURE__ */ new Set();
+    for (const a2 of inMemoryArticles) {
+      if (urls.includes(a2.url)) {
+        existing.add(a2.url);
+      }
+    }
+    try {
+      const sql2 = `SELECT url FROM public.articles WHERE url = ANY($1::text[]);`;
+      const rows = await query(sql2, [urls]);
+      if (rows && rows.length > 0) {
+        for (const r of rows) {
+          existing.add(r.url);
+        }
+      }
+    } catch (err) {
+      console.warn("[ArticleRepository] DB findExistingUrls notice:", err.message);
+    }
+    return existing;
+  }
   static async updateEventId(articleId, eventId) {
     try {
       const sql2 = `UPDATE public.articles SET event_id = $1 WHERE id = $2;`;
@@ -79217,47 +79518,37 @@ var ArticleRepository = class {
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     try {
-      const existing = await queryOne(`SELECT id FROM public.articles WHERE url = $1 LIMIT 1;`, [newArticle.url]);
-      if (existing) {
-        const updateSql = `
-          UPDATE public.articles 
-          SET 
-            title = $1, 
-            content_snippet = $2, 
-            event_id = COALESCE($3, event_id),
-            region_id = COALESCE($4, region_id),
-            category_id = COALESCE($5, category_id)
-          WHERE id = $6
-          RETURNING 
-            id, source_id AS "sourceId", event_id AS "eventId", title, url, 
-            content_snippet AS "contentSnippet", published_at AS "publishedAt", 
-            region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
-        `;
-        const rows = await query(updateSql, [
-          newArticle.title,
-          newArticle.contentSnippet || null,
-          newArticle.eventId || null,
-          newArticle.regionId || null,
-          newArticle.categoryId || null,
-          existing.id
-        ]);
-        if (rows && rows.length > 0) {
-          return rows[0];
-        }
-      } else {
-        const insertSql = `
-          INSERT INTO public.articles (
-            id, source_id, event_id, title, url, content_snippet, published_at, region_id, category_id
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          RETURNING 
-            id, source_id AS "sourceId", event_id AS "eventId", title, url, 
-            content_snippet AS "contentSnippet", published_at AS "publishedAt", 
-            region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
-        `;
-        let rows = await query(insertSql, [
+      const upsertSql = `
+        INSERT INTO public.articles (
+          id, source_id, event_id, title, url, content_snippet, published_at, region_id, category_id
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (url) DO UPDATE SET
+          title = EXCLUDED.title,
+          content_snippet = EXCLUDED.content_snippet,
+          event_id = COALESCE(EXCLUDED.event_id, public.articles.event_id),
+          region_id = COALESCE(EXCLUDED.region_id, public.articles.region_id),
+          category_id = COALESCE(EXCLUDED.category_id, public.articles.category_id)
+        RETURNING 
+          id, source_id AS "sourceId", event_id AS "eventId", title, url, 
+          content_snippet AS "contentSnippet", published_at AS "publishedAt", 
+          region_id AS "regionId", category_id AS "categoryId", created_at AS "createdAt";
+      `;
+      let rows = await query(upsertSql, [
+        newArticle.id,
+        newArticle.sourceId || null,
+        newArticle.eventId || null,
+        newArticle.title,
+        newArticle.url,
+        newArticle.contentSnippet || null,
+        newArticle.publishedAt,
+        newArticle.regionId || null,
+        newArticle.categoryId || null
+      ]);
+      if ((!rows || rows.length === 0) && newArticle.sourceId) {
+        rows = await query(upsertSql, [
           newArticle.id,
-          newArticle.sourceId || null,
+          null,
           newArticle.eventId || null,
           newArticle.title,
           newArticle.url,
@@ -79266,23 +79557,9 @@ var ArticleRepository = class {
           newArticle.regionId || null,
           newArticle.categoryId || null
         ]);
-        if ((!rows || rows.length === 0) && newArticle.sourceId) {
-          console.warn(`[ArticleRepository] Retrying article insertion with source_id=null fallback for: ${newArticle.url}`);
-          rows = await query(insertSql, [
-            newArticle.id,
-            null,
-            newArticle.eventId || null,
-            newArticle.title,
-            newArticle.url,
-            newArticle.contentSnippet || null,
-            newArticle.publishedAt,
-            newArticle.regionId || null,
-            newArticle.categoryId || null
-          ]);
-        }
-        if (rows && rows.length > 0) {
-          return rows[0];
-        }
+      }
+      if (rows && rows.length > 0) {
+        return rows[0];
       }
     } catch (err) {
       console.warn("[ArticleRepository] DB insert/update error:", err.message);
@@ -80327,8 +80604,13 @@ var RankingService = class {
     const { limit = 10, regionId, categoryId, status, applyDiversity = true } = options;
     let filtered = [...events];
     if (regionId && regionId.toUpperCase() !== "ALL") {
-      const targetRegion = regionId.toLowerCase();
-      filtered = filtered.filter((e) => (e.regionId || "").toLowerCase() === targetRegion || (e.region || "").toLowerCase() === targetRegion);
+      const targetRegion = regionId.toLowerCase().replace(/\s+/g, "-");
+      const targetRegionName = regionId.toLowerCase();
+      filtered = filtered.filter((e) => {
+        const rId = (e.regionId || "").toLowerCase().replace(/\s+/g, "-");
+        const rName = (e.region || "").toLowerCase();
+        return rId === targetRegion || rName === targetRegionName || rId.includes(targetRegion) || targetRegion.includes(rId);
+      });
     }
     if (categoryId && categoryId.toUpperCase() !== "ALL") {
       const targetCategory = categoryId.toLowerCase();
@@ -80336,12 +80618,21 @@ var RankingService = class {
     }
     if (status && status.toUpperCase() !== "ALL") {
       const targetStatus = status.toUpperCase();
-      filtered = filtered.filter((e) => {
-        if (targetStatus === "BREAKING") return e.rankingMetadata?.breakingStatus || e.urgencyLabel === "BREAKING";
-        if (targetStatus === "TRENDING") return e.rankingMetadata?.trendStatus === "TRENDING" || e.rankingMetadata?.trendStatus === "HIGHLY_TRENDING" || e.urgencyLabel === "TRENDING";
-        if (targetStatus === "IMPORTANT") return e.rankingMetadata?.importanceStatus === "IMPORTANT" || e.rankingMetadata?.importanceStatus === "CRITICAL" || e.urgencyLabel === "IMPORTANT";
+      const statusFiltered = filtered.filter((e) => {
+        if (targetStatus === "BREAKING") {
+          return e.rankingMetadata?.breakingStatus || e.urgencyLabel === "BREAKING" || e.finalRankScore && e.finalRankScore >= 85;
+        }
+        if (targetStatus === "TRENDING") {
+          return e.rankingMetadata?.trendStatus === "TRENDING" || e.rankingMetadata?.trendStatus === "HIGHLY_TRENDING" || e.rankingMetadata?.trendStatus === "RISING" || e.urgencyLabel === "TRENDING" || e.velocityScore && e.velocityScore >= 75;
+        }
+        if (targetStatus === "IMPORTANT") {
+          return e.rankingMetadata?.importanceStatus === "IMPORTANT" || e.rankingMetadata?.importanceStatus === "CRITICAL" || e.urgencyLabel === "IMPORTANT" || e.importanceScore && e.importanceScore >= 70;
+        }
         return true;
       });
+      if (statusFiltered.length > 0) {
+        filtered = statusFiltered;
+      }
     }
     filtered.sort((a2, b2) => {
       if (b2.finalRankScore !== a2.finalRankScore) {
@@ -80470,13 +80761,18 @@ var RankingService = class {
     const { events } = await EventRepository.findAll({
       regionId: options.regionId,
       categoryId: options.categoryId,
-      limit: 20,
+      limit: Math.max(30, limit * 3),
       page: 1
     });
     const now = /* @__PURE__ */ new Date();
     const scoredEvents = [];
+    const missingArticleIds = events.filter((e) => !e.articles || e.articles.length === 0).map((e) => e.id);
+    let batchArticlesMap = /* @__PURE__ */ new Map();
+    if (missingArticleIds.length > 0) {
+      batchArticlesMap = await EventRepository.findArticlesByEventIds(missingArticleIds);
+    }
     for (const evt of events) {
-      const articles = evt.articles || await EventRepository.findArticlesByEventId(evt.id);
+      const articles = evt.articles && evt.articles.length > 0 ? evt.articles : batchArticlesMap.get(evt.id) || [];
       const scored = this.scoreEvent(evt, articles, now);
       scoredEvents.push(scored);
     }
@@ -87882,7 +88178,10 @@ var NewsIngestionService = class {
             }
             report.sourcesSucceeded++;
             report.articlesDiscovered += fetchResult.items.length;
-            for (const rawItem of fetchResult.items.slice(0, 15)) {
+            const candidateItems = fetchResult.items.slice(0, 15);
+            const urlsToCheck = candidateItems.map((item) => normalizeArticleUrl(item.link || "")).filter(Boolean);
+            const existingUrlsSet = await ArticleRepository.findExistingUrls(urlsToCheck);
+            for (const rawItem of candidateItems) {
               const rawUrl = rawItem.link || "";
               const normalizedUrl = normalizeArticleUrl(rawUrl);
               const rawTitle = rawItem.title || "";
@@ -87902,8 +88201,7 @@ var NewsIngestionService = class {
                 report.articlesRejected++;
                 continue;
               }
-              const alreadyExists = await ArticleRepository.existsByUrl(normalizedUrl);
-              if (alreadyExists) {
+              if (existingUrlsSet.has(normalizedUrl)) {
                 report.duplicatesSkipped++;
                 continue;
               }
