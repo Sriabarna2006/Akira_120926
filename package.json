@@ -12,8 +12,8 @@
     "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
     "dev:client": "npm run dev --workspace=client",
     "dev:server": "npm run dev --workspace=server",
-    "build": "npm run build --workspace=server && npm run build --workspace=client && npx esbuild server/src/vercel.ts --bundle --platform=node --format=esm --outfile=api/index.js --target=node18 --external:pg-native && node copy-dist.js && node copy-api.js",
-    "build:all": "npm run build --workspace=server && npm run build --workspace=client && npx esbuild server/src/vercel.ts --bundle --platform=node --format=esm --outfile=api/index.js --target=node18 --external:pg-native && node copy-dist.js && node copy-api.js",
+    "build": "npm run build --workspace=server && npm run build --workspace=client && npx esbuild server/src/vercel.ts --bundle --platform=node --format=esm --outfile=api/index.js --target=node18 --external:pg-native \"--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && node copy-dist.js && node copy-api.js",
+    "build:all": "npm run build --workspace=server && npm run build --workspace=client && npx esbuild server/src/vercel.ts --bundle --platform=node --format=esm --outfile=api/index.js --target=node18 --external:pg-native \"--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && node copy-dist.js && node copy-api.js",
     "test": "npm run test --workspace=server"
 
   },
