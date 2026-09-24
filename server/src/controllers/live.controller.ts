@@ -111,12 +111,21 @@ export class LiveController {
   }
 
   /**
-   * POST /api/live/sync
+   * GET / POST /api/live/sync
    * Protected internal / admin ingestion trigger.
    */
   static async sync(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      let sourceFilter = req.body?.sources as string[] | undefined;
+      let sourceFilter: string[] | undefined = undefined;
+
+      if (req.body?.sources && Array.isArray(req.body.sources)) {
+        sourceFilter = req.body.sources;
+      } else if (req.query?.sources) {
+        sourceFilter = typeof req.query.sources === 'string'
+          ? req.query.sources.split(',').map((s) => s.trim())
+          : (req.query.sources as string[]);
+      }
+
       if (!sourceFilter && process.env.NODE_ENV === 'test') {
         sourceFilter = ['the-hindu-tn'];
       }

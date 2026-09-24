@@ -24,7 +24,8 @@ router.post('/:id/read', requireAuth, NotificationController.markAsRead);
 // 🧪 Test Notification Dispatch (authenticated user)
 router.post('/test', requireAuth, NotificationController.sendTestNotification);
 
-// ⏰ Scheduler Cron Trigger (internal secret / cron protected)
+// ⏰ Scheduler Cron Trigger (internal secret / cron protected - supports GET and POST)
+router.get('/scheduler/run', requireInternalSecret, NotificationController.triggerSchedulerRun);
 router.post('/scheduler/run', requireInternalSecret, NotificationController.triggerSchedulerRun);
 
 export default router;

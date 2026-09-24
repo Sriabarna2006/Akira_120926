@@ -68,13 +68,16 @@ router.use('/notifications', notificationRoutes);
 // 🔐 AUTH & USER-PRIVATE ROUTES
 router.use('/auth', authRoutes);
 
-// 🔄 BACKWARDS COMPATIBILITY ALIASES
+// 🔄 BACKWARDS COMPATIBILITY ALIASES (Supporting both GET and POST)
 router.get('/news/live', LiveController.getLiveStream);
 router.get('/news', LiveController.getLiveStream);
 router.get('/news/top', LiveController.getTop);
 router.get('/news/live/top', LiveController.getTop);
+router.get('/news/refresh', LiveController.refreshLiveFeeds);
 router.post('/news/refresh', LiveController.refreshLiveFeeds);
+router.get('/news/sync', requireInternalSecret, LiveController.sync);
 router.post('/news/sync', requireInternalSecret, LiveController.sync);
+router.get('/news/live/sync', requireInternalSecret, LiveController.sync);
 router.post('/news/live/sync', requireInternalSecret, LiveController.sync);
 router.get('/news/:id', EventController.getById);
 
